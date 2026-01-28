@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sweet Delights Bakery - Fresh Baked Goods Daily</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">🥖 Sweet Delights Bakery</div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#menu" class="nav-link">Menu</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Welcome to Sweet Delights Bakery</h1>
+            <p>Freshly baked goods made with love, every single day</p>
+            <a href="#menu" class="btn btn-primary">View Our Menu</a>
+        </div>
+    </section>
+
+    <!-- Menu Section -->
+    <section id="menu" class="menu">
+        <div class="container">
+            <h2 class="section-title">Our Delicious Menu</h2>
+            <div class="menu-categories">
+                <button class="category-btn active" data-category="all">All</button>
+                <button class="category-btn" data-category="bread">Bread</button>
+                <button class="category-btn" data-category="pastries">Pastries</button>
+                <button class="category-btn" data-category="cakes">Cakes</button>
+                <button class="category-btn" data-category="cookies">Cookies</button>
+            </div>
+            <div class="menu-grid">
+                <!-- Bread Items -->
+                <div class="menu-item" data-category="bread">
+                    <div class="menu-item-icon">🍞</div>
+                    <h3>Sourdough Bread</h3>
+                    <p>Traditional sourdough with a crispy crust and soft interior</p>
+                    <span class="price">$5.99</span>
+                </div>
+                <div class="menu-item" data-category="bread">
+                    <div class="menu-item-icon">🥖</div>
+                    <h3>French Baguette</h3>
+                    <p>Classic French baguette, baked fresh every morning</p>
+                    <span class="price">$3.99</span>
+                </div>
+                <div class="menu-item" data-category="bread">
+                    <div class="menu-item-icon">🥯</div>
+                    <h3>Everything Bagel</h3>
+                    <p>Chewy bagel topped with sesame, poppy seeds, and more</p>
+                    <span class="price">$2.99</span>
+                </div>
+
+                <!-- Pastries -->
+                <div class="menu-item" data-category="pastries">
+                    <div class="menu-item-icon">🥐</div>
+                    <h3>Butter Croissant</h3>
+                    <p>Flaky, buttery croissant made with premium butter</p>
+                    <span class="price">$3.49</span>
+                </div>
+                <div class="menu-item" data-category="pastries">
+                    <div class="menu-item-icon">🧁</div>
+                    <h3>Blueberry Muffin</h3>
+                    <p>Moist muffin bursting with fresh blueberries</p>
+                    <span class="price">$3.29</span>
+                </div>
+                <div class="menu-item" data-category="pastries">
+                    <div class="menu-item-icon">🥮</div>
+                    <h3>Danish Pastry</h3>
+                    <p>Sweet Danish with fruit filling and cream cheese</p>
+                    <span class="price">$3.99</span>
+                </div>
+
+                <!-- Cakes -->
+                <div class="menu-item" data-category="cakes">
+                    <div class="menu-item-icon">🎂</div>
+                    <h3>Chocolate Cake</h3>
+                    <p>Rich chocolate cake with chocolate ganache</p>
+                    <span class="price">$24.99</span>
+                </div>
+                <div class="menu-item" data-category="cakes">
+                    <div class="menu-item-icon">🍰</div>
+                    <h3>Cheesecake</h3>
+                    <p>Creamy New York style cheesecake</p>
+                    <span class="price">$22.99</span>
+                </div>
+                <div class="menu-item" data-category="cakes">
+                    <div class="menu-item-icon">🧁</div>
+                    <h3>Red Velvet Cake</h3>
+                    <p>Classic red velvet with cream cheese frosting</p>
+                    <span class="price">$26.99</span>
+                </div>
+
+                <!-- Cookies -->
+                <div class="menu-item" data-category="cookies">
+                    <div class="menu-item-icon">🍪</div>
+                    <h3>Chocolate Chip Cookies</h3>
+                    <p>Classic cookies with premium chocolate chips</p>
+                    <span class="price">$8.99/dozen</span>
+                </div>
+                <div class="menu-item" data-category="cookies">
+                    <div class="menu-item-icon">🍪</div>
+                    <h3>Oatmeal Raisin Cookies</h3>
+                    <p>Chewy cookies with oats and plump raisins</p>
+                    <span class="price">$7.99/dozen</span>
+                </div>
+                <div class="menu-item" data-category="cookies">
+                    <div class="menu-item-icon">🍪</div>
+                    <h3>Sugar Cookies</h3>
+                    <p>Soft sugar cookies with vanilla frosting</p>
+                    <span class="price">$9.99/dozen</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2 class="section-title">About Us</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Our Story</h3>
+                    <p>Sweet Delights Bakery was founded in 2020 with a simple mission: to bring fresh, delicious baked goods to our community. We use only the finest ingredients and traditional baking methods to create treats that remind you of home.</p>
+                    <p>Every morning, our bakers arrive before dawn to start preparing the day's selection. From crusty artisan breads to delicate pastries, everything is made from scratch with love and care.</p>
+                    <div class="features">
+                        <div class="feature">
+                            <span class="feature-icon">✓</span>
+                            <span>Fresh Daily</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">✓</span>
+                            <span>All Natural</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">✓</span>
+                            <span>Made from Scratch</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">✓</span>
+                            <span>Family Recipes</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <div class="about-image-placeholder">🧑‍🍳</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section-title">Visit Us Today</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="info-item">
+                        <h3>📍 Location</h3>
+                        <p>123 Baker Street<br>Sweet Town, ST 12345</p>
+                    </div>
+                    <div class="info-item">
+                        <h3>⏰ Hours</h3>
+                        <p>Monday - Friday: 6am - 8pm<br>
+                        Saturday: 7am - 9pm<br>
+                        Sunday: 7am - 6pm</p>
+                    </div>
+                    <div class="info-item">
+                        <h3>📞 Contact</h3>
+                        <p>Phone: (555) 123-4567<br>
+                        Email: hello@sweetdelights.com</p>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <h3>Send us a message</h3>
+                    <form id="contactForm">
+                        <input type="text" placeholder="Your Name" required>
+                        <input type="email" placeholder="Your Email" required>
+                        <textarea placeholder="Your Message" rows="5" required></textarea>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Sweet Delights Bakery. All rights reserved.</p>
+            <div class="social-links">
+                <a href="#" aria-label="Facebook">📘</a>
+                <a href="#" aria-label="Instagram">📷</a>
+                <a href="#" aria-label="Twitter">🐦</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
