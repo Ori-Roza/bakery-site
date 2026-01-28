@@ -1,7 +1,10 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-const WHATSAPP_PHONE = "972501234567";
-const ORDER_EMAIL = "ori.roza@bluevine.com";
+const CONTACT_PHONE = "050-123-4567";
+const CONTACT_PHONE_INTL = "972501234567";
+const CONTACT_EMAIL = "ori.roza@bluevine.com";
+const WHATSAPP_PHONE = CONTACT_PHONE_INTL;
+const ORDER_EMAIL = CONTACT_EMAIL;
 
 const SUPABASE_CONFIG = window.__SUPABASE__ || {};
 const supabaseClient =
@@ -239,6 +242,10 @@ const categoryModal = document.getElementById("category-modal");
 const categoryModalClose = document.getElementById("category-modal-close");
 const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
+const contactPhoneEl = document.getElementById("contact-phone");
+const contactWhatsappEl = document.getElementById("contact-whatsapp");
+const contactEmailEl = document.getElementById("contact-email");
+const contactEmailTextEl = document.getElementById("contact-email-text");
 const notesPopover = document.createElement("div");
 notesPopover.id = "notes-popover";
 notesPopover.className = "notes-popover hidden";
@@ -1555,6 +1562,20 @@ const setupListeners = () => {
 const init = async () => {
   setupListeners();
   updateRoute();
+
+  if (contactPhoneEl) {
+    contactPhoneEl.href = `tel:+${CONTACT_PHONE_INTL}`;
+    contactPhoneEl.lastChild.textContent = CONTACT_PHONE;
+  }
+  if (contactWhatsappEl) {
+    contactWhatsappEl.href = `https://wa.me/${CONTACT_PHONE_INTL}`;
+  }
+  if (contactEmailEl) {
+    contactEmailEl.href = `mailto:${CONTACT_EMAIL}`;
+    if (contactEmailTextEl) {
+      contactEmailTextEl.textContent = CONTACT_EMAIL;
+    }
+  }
 
   if (!supabaseClient) {
     state.products = seedProducts;
