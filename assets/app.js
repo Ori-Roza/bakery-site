@@ -1267,8 +1267,13 @@ const openNotesPopover = (inputEl) => {
   activeNotesInput = inputEl;
   notesTextarea.value = inputEl.value || "";
   const rect = inputEl.getBoundingClientRect();
-  const top = rect.bottom + 8;
-  const left = Math.min(rect.left, window.innerWidth - 360);
+  const popoverWidth = Math.min(360, window.innerWidth - 24);
+  const popoverHeight = 220;
+  let top = rect.bottom + 8;
+  if (top + popoverHeight > window.innerHeight) {
+    top = rect.top - popoverHeight - 8;
+  }
+  const left = Math.min(rect.left, window.innerWidth - popoverWidth - 12);
   notesPopover.style.top = `${Math.max(top, 12)}px`;
   notesPopover.style.left = `${Math.max(left, 12)}px`;
   notesPopover.classList.remove("hidden");
