@@ -469,8 +469,7 @@ const renderProducts = () => {
       .filter((product) =>
         product.title.toLowerCase().includes(query)
       )
-      .sort((a, b) => a.title.localeCompare(b.title, "he"))
-      .slice(0, 5);
+      .sort((a, b) => a.title.localeCompare(b.title, "he"));
 
     productsScrollEl.innerHTML = "";
     items.forEach((product) => {
