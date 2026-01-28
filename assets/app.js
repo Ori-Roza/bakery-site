@@ -192,6 +192,10 @@ const adminAboutStatus = document.getElementById("admin-about-status");
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
+const deleteConfirmModal = document.getElementById("delete-confirm-modal");
+const deleteConfirmClose = document.getElementById("delete-confirm-close");
+const deleteConfirmYes = document.getElementById("delete-confirm-yes");
+const deleteConfirmNo = document.getElementById("delete-confirm-no");
 const orderName = document.getElementById("order-name");
 const orderDate = document.getElementById("order-date");
 const orderTotal = document.getElementById("order-total");
@@ -1194,6 +1198,14 @@ const closeOrderModal = () => {
   orderModal.classList.add("hidden");
 };
 
+const openDeleteConfirm = () => {
+  deleteConfirmModal.classList.remove("hidden");
+};
+
+const closeDeleteConfirm = () => {
+  deleteConfirmModal.classList.add("hidden");
+};
+
 const openNotesPopover = (inputEl) => {
   if (!inputEl) return;
   activeNotesInput = inputEl;
@@ -1371,8 +1383,17 @@ const setupListeners = () => {
   modalClose.addEventListener("click", closeModal);
   modalDelete.addEventListener("click", () => {
     if (state.editingProductId) {
+      openDeleteConfirm();
+    }
+  });
+
+  deleteConfirmClose.addEventListener("click", closeDeleteConfirm);
+  deleteConfirmNo.addEventListener("click", closeDeleteConfirm);
+  deleteConfirmYes.addEventListener("click", () => {
+    if (state.editingProductId) {
       handleDeleteProduct(state.editingProductId);
     }
+    closeDeleteConfirm();
   });
 
   openCreateModal.addEventListener("click", openCreateProductModal);
