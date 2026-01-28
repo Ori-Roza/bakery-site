@@ -641,6 +641,9 @@ const setAdminUI = (isAuthenticated) => {
   adminPanelEl.classList.toggle("hidden", !isAuthenticated);
   adminGreetingEl.classList.toggle("hidden", !isAuthenticated);
   adminLogoutButton.classList.toggle("hidden", !isAuthenticated);
+  document.getElementById("contact")?.classList.toggle("hidden", isAuthenticated);
+  document.getElementById("about")?.classList.toggle("hidden", isAuthenticated);
+  document.getElementById("hero")?.classList.toggle("hidden", isAuthenticated);
 };
 
 const setPasswordUI = (show) => {
