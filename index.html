@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>בית מאפה "ברכת יעקב"</title>
+    <meta
+      name="description"
+      content="הזמנת מאפים טריים מבית מאפה ברכת יעקב – חלות, לחמים ומאפים מתוקים ומלוחים."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body class="bg-amber-50 text-stone-800">
+    <div class="min-h-screen">
+      <header class="bg-amber-100/90 backdrop-blur border-b border-amber-200">
+        <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col gap-4">
+          <a
+            href="#admin"
+            class="text-sm text-amber-900/80 underline underline-offset-4 self-start"
+            >אזור ניהול</a
+          >
+          <div class="text-center">
+            <p class="text-sm text-amber-900/70">בית מאפה</p>
+            <h1 class="text-2xl font-bold text-amber-900">"ברכת יעקב"</h1>
+          </div>
+          <p class="text-sm text-stone-700 max-w-xl mx-auto text-center">
+            מאפים חמים מהתנור, חומרי גלם איכותיים וטעם של שבת. הזמינו אונליין והאיסוף
+            מוכן בדיוק בזמן.
+          </p>
+        </div>
+      </header>
+
+      <main class="max-w-6xl mx-auto px-4 py-6 space-y-10">
+        <section class="hero-card">
+          <div class="flex flex-col gap-4">
+            <span class="badge">חדש • הזמנות אונליין</span>
+            <h2 class="text-3xl md:text-4xl font-bold text-amber-900">
+              בית המאפה שלכם לשבת, חג ובוקר מתוק
+            </h2>
+            <p class="text-stone-700">
+              בחרו מאפים טריים, הוסיפו לסל ושלחו את ההזמנה לוואטסאפ של יעקב.
+            </p>
+            <div class="flex flex-wrap gap-3 text-sm text-stone-700">
+              <span class="info-chip flex items-center gap-2">
+                <i data-lucide="clock-3" class="w-4 h-4"></i>
+                איסוף מהיר באותו יום
+              </span>
+              <span class="info-chip flex items-center gap-2">
+                <i data-lucide="wheat" class="w-4 h-4"></i>
+                חלות בעבודת יד
+              </span>
+              <span class="info-chip flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                מאפים חמים כל בוקר
+              </span>
+            </div>
+          </div>
+          <img
+            src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80"
+            alt="לחם חם וקריספי"
+            class="hero-image"
+          />
+        </section>
+
+        <section id="about" class="space-y-4">
+          <h3 class="section-title">אודות</h3>
+          <div class="checkout-card">
+            <p class="text-stone-700 leading-relaxed">
+              בית מאפה "ברכת יעקב" הוא מאפייה משפחתית עם אהבה לבצק, לחום של התנור
+              ולטעמים של בית. אנו אופים מדי יום חלות, לחמים ומאפים טריים מחומרי גלם
+              איכותיים, עם הקפדה על טריות, שירות אישי וחוויה נעימה לכל המשפחה.
+            </p>
+            <p class="text-stone-700 leading-relaxed mt-3">
+              המטרה שלנו היא לשלב בין מסורת לאיכות מודרנית — כדי שתוכלו ליהנות מארוחה
+              חמה, שולחן שבת עשיר ורגעים מתוקים לאורך השבוע.
+            </p>
+          </div>
+        </section>
+
+        <section id="catalog" class="space-y-8">
+          <div class="flex items-center justify-between">
+            <h3 class="section-title">המומלצים של השבוע</h3>
+            <button id="reset-products" class="text-sm text-amber-900/80 underline">
+              איפוס קטלוג
+            </button>
+          </div>
+          <div id="category-sections" class="space-y-10"></div>
+        </section>
+
+        <section id="checkout" class="space-y-4">
+          <h3 class="section-title">סיום הזמנה</h3>
+          <div class="checkout-card">
+            <form id="checkout-form" class="grid gap-4">
+              <div>
+                <label for="customer-name" class="form-label">שם מלא</label>
+                <input
+                  id="customer-name"
+                  name="name"
+                  type="text"
+                  class="form-input"
+                  placeholder="שם מלא"
+                  required
+                />
+              </div>
+              <div>
+                <label for="customer-phone" class="form-label">טלפון</label>
+                <input
+                  id="customer-phone"
+                  name="phone"
+                  type="tel"
+                  class="form-input"
+                  placeholder="050-0000000"
+                  required
+                />
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="pickup-date" class="form-label">תאריך איסוף</label>
+                  <input
+                    id="pickup-date"
+                    name="date"
+                    type="date"
+                    class="form-input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="pickup-time" class="form-label">שעה</label>
+                  <input
+                    id="pickup-time"
+                    name="time"
+                    type="time"
+                    class="form-input"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="primary-button"
+                id="whatsapp-submit"
+              >
+                שלח הזמנה לוואטסאפ של יעקב
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section id="admin" class="space-y-4 hidden">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <h3 class="secondary-button text-sm font-semibold">אזור ניהול</h3>
+            <div class="flex items-center gap-3">
+              <button id="admin-logout" class="secondary-button hidden">
+                התנתקות
+              </button>
+              <a href="#catalog" class="secondary-button">חזרה לחנות</a>
+            </div>
+          </div>
+          <p id="admin-greeting" class="text-sm text-stone-600 hidden text-left"></p>
+          <div id="admin-auth" class="admin-card">
+            <h4 class="admin-title">כניסה לניהול</h4>
+            <form id="admin-login-form" class="grid gap-4">
+              <div>
+                <label for="admin-email" class="form-label">אימייל</label>
+                <input
+                  id="admin-email"
+                  name="email"
+                  type="email"
+                  class="form-input"
+                  placeholder="admin@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <label for="admin-password" class="form-label">סיסמה</label>
+                <input
+                  id="admin-password"
+                  name="password"
+                  type="password"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <button type="submit" class="primary-button">
+                התחברות
+              </button>
+            </form>
+            <p id="admin-auth-error" class="text-sm text-rose-600 hidden"></p>
+          </div>
+
+          <div id="admin-panel" class="admin-grid hidden">
+            <div class="admin-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <h4 class="admin-title">ניהול מוצרים</h4>
+                <button id="open-create-modal" class="primary-button">
+                  יצירת מוצר חדש
+                </button>
+              </div>
+              <div class="mt-4 mb-4 relative">
+                <input
+                  id="admin-search"
+                  class="form-input pr-10"
+                  placeholder="חיפוש מוצר לפי שם/קטגוריה"
+                />
+                <i
+                  data-lucide="search"
+                  class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2"
+                ></i>
+              </div>
+              <div class="admin-table-wrapper">
+                <table id="admin-products-table" class="admin-table">
+                  <thead>
+                    <tr>
+                      <th data-sort="title">שם מוצר</th>
+                      <th data-sort="category">קטגוריה</th>
+                      <th data-sort="price">מחיר</th>
+                      <th data-sort="inStock">זמין</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-products"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="admin-card">
+              <div class="flex items-center justify-between">
+                <h4 class="admin-title">הזמנות אחרונות</h4>
+                <button id="admin-new-order" class="primary-button">
+                  יצירת הזמנה חדשה
+                </button>
+              </div>
+              <div class="mt-4 mb-4 relative">
+                <input
+                  id="admin-orders-search"
+                  class="form-input pr-10"
+                  placeholder="חיפוש הזמנה לפי שם/הערות"
+                />
+                <i
+                  data-lucide="search"
+                  class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2"
+                ></i>
+              </div>
+              <div class="admin-table-wrapper">
+                <table id="admin-orders-table" class="admin-table">
+                  <thead>
+                    <tr>
+                      <th data-sort="name">שם</th>
+                      <th data-sort="created_at">תאריך</th>
+                      <th data-sort="total">סכום</th>
+                      <th data-sort="paid">שולם</th>
+                      <th data-sort="notes">הערות</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-orders"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="border-t border-amber-200 mt-10">
+        <div class="max-w-6xl mx-auto px-4 py-6 text-sm text-stone-600">
+          © 2026 בית מאפה "ברכת יעקב" • הזמנות אונליין
+        </div>
+      </footer>
+    </div>
+
+    <aside id="cart-drawer" class="cart-drawer">
+      <div class="cart-header">
+        <div>
+          <p class="text-sm text-stone-500">העגלה שלך</p>
+          <h3 class="text-xl font-bold text-amber-900">סל הזמנה</h3>
+        </div>
+        <button id="close-cart" class="text-stone-500 hover:text-stone-700">
+          סגור
+        </button>
+      </div>
+      <div id="cart-items" class="cart-items"></div>
+      <div class="cart-footer">
+        <div class="flex items-center justify-between text-lg font-bold">
+          <span>סה"כ לתשלום</span>
+          <span id="cart-total">₪0</span>
+        </div>
+        <button id="checkout-scroll" class="primary-button">
+          המשך לתשלום
+        </button>
+      </div>
+    </aside>
+
+    <button id="floating-cart" class="floating-cart">
+      <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+      <span class="text-sm">עגלה</span>
+      <span id="floating-count" class="font-semibold">0</span>
+      <span id="floating-total" class="font-semibold">₪0</span>
+    </button>
+
+    <div id="overlay" class="overlay hidden"></div>
+
+    <div id="product-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="flex items-center justify-between">
+          <h4 class="admin-title">פרטי מוצר</h4>
+          <button id="modal-close" class="secondary-button">סגור</button>
+        </div>
+        <div class="grid gap-3 mt-4">
+          <div>
+            <label class="form-label" for="modal-title">שם מוצר</label>
+            <input id="modal-title" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label" for="modal-price">מחיר</label>
+            <input id="modal-price" type="number" min="0" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label">קטגוריה</label>
+            <div class="dropdown" id="modal-category-dropdown">
+              <button
+                type="button"
+                id="modal-category-trigger"
+                class="form-input dropdown-trigger"
+              >
+                בחר קטגוריה
+              </button>
+              <div class="dropdown-panel">
+                <input
+                  id="modal-category-search"
+                  class="form-input"
+                  placeholder="חיפוש קטגוריה"
+                />
+                <div id="modal-category-list" class="dropdown-list"></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="form-label" for="modal-image">כתובת תמונה</label>
+            <input id="modal-image" class="form-input" />
+          </div>
+          <label class="flex items-center gap-2 text-sm text-stone-700">
+            <input id="modal-stock" type="checkbox" />
+            זמין במלאי
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button id="modal-save" class="primary-button">שמירה</button>
+          <button id="modal-delete" class="secondary-button">מחיקת מוצר</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="create-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="flex items-center justify-between">
+          <h4 class="admin-title">יצירת מוצר חדש</h4>
+          <button id="create-modal-close" class="secondary-button">סגור</button>
+        </div>
+        <div class="grid gap-3 mt-4">
+          <div>
+            <label class="form-label" for="create-title">שם מוצר</label>
+            <input id="create-title" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label" for="create-price">מחיר</label>
+            <input id="create-price" type="number" min="0" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label">קטגוריה</label>
+            <div class="dropdown" id="create-category-dropdown">
+              <button
+                type="button"
+                id="create-category-trigger"
+                class="form-input dropdown-trigger"
+              >
+                בחר קטגוריה
+              </button>
+              <div class="dropdown-panel">
+                <input
+                  id="create-category-search"
+                  class="form-input"
+                  placeholder="חיפוש קטגוריה"
+                />
+                <div id="create-category-list" class="dropdown-list"></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="form-label" for="create-image">כתובת תמונה</label>
+            <input id="create-image" class="form-input" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button id="create-save" class="primary-button">שמירה</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="order-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="flex items-center justify-between">
+          <h4 class="admin-title">יצירת הזמנה חדשה</h4>
+          <button id="order-modal-close" class="secondary-button">סגור</button>
+        </div>
+        <div class="grid gap-3 mt-4">
+          <div>
+            <label class="form-label" for="order-name">שם</label>
+            <input id="order-name" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label" for="order-date">תאריך</label>
+            <input id="order-date" type="datetime-local" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label" for="order-total">סכום</label>
+            <input id="order-total" type="number" min="0" class="form-input" />
+          </div>
+          <label class="flex items-center gap-2 text-sm text-stone-700">
+            <input id="order-paid" type="checkbox" class="form-checkbox" />
+            שולם
+          </label>
+          <div>
+            <label class="form-label" for="order-notes">הערות</label>
+            <textarea id="order-notes" class="form-input" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button id="order-save" class="primary-button">שמירה</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="category-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="flex items-center justify-between">
+          <h4 class="admin-title">יצירת קטגוריה חדשה</h4>
+          <button id="category-modal-close" class="secondary-button">סגור</button>
+        </div>
+        <div class="grid gap-3 mt-4">
+          <div>
+            <label class="form-label" for="category-name">שם קטגוריה</label>
+            <input id="category-name" class="form-input" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button id="category-save" class="primary-button">שמירה</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="assets/config.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
