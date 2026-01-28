@@ -127,14 +127,14 @@
             <form id="checkout-form" class="grid gap-4">
               <div>
                 <label for="customer-name" class="form-label">שם מלא</label>
-                <input
-                  id="customer-name"
-                  name="name"
-                  type="text"
-                  class="form-input"
-                  placeholder="שם מלא"
-                  required
-                />
+                  <input
+                    id="customer-name"
+                    name="name"
+                    type="text"
+                    class="form-input"
+                    placeholder="שם מזמין"
+                    required
+                  />
               </div>
               <div>
                 <label for="customer-phone" class="form-label">טלפון</label>
@@ -280,7 +280,7 @@
                 <input
                   id="admin-orders-search"
                   class="form-input pr-10"
-                  placeholder="חיפוש הזמנה לפי שם/הערות"
+                  placeholder="חיפוש הזמנה לפי שם/מזהה"
                 />
                 <i
                   data-lucide="search"
@@ -292,7 +292,7 @@
                   <thead>
                     <tr>
                       <th data-sort="order_number">מזהה הזמנה</th>
-                      <th data-sort="name">שם</th>
+                      <th data-sort="name">שם מזמין</th>
                       <th data-sort="created_at">תאריך</th>
                       <th data-sort="total">סכום</th>
                       <th data-sort="paid">שולם</th>

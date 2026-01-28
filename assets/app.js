@@ -225,6 +225,18 @@ const categoryModal = document.getElementById("category-modal");
 const categoryModalClose = document.getElementById("category-modal-close");
 const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
+const notesPopover = document.createElement("div");
+notesPopover.id = "notes-popover";
+notesPopover.className = "notes-popover hidden";
+notesPopover.innerHTML = `
+  <div class="notes-popover-card">
+    <label class="form-label">הערות להזמנה</label>
+    <textarea class="form-input notes-textarea" rows="5"></textarea>
+  </div>
+`;
+document.body.appendChild(notesPopover);
+const notesTextarea = notesPopover.querySelector(".notes-textarea");
+let activeNotesInput = null;
 
 const formatCurrency = (value) => `₪${Number(value).toFixed(0)}`;
 const DEFAULT_ABOUT =
@@ -505,8 +517,8 @@ const renderAdmin = () => {
   const filteredOrders = state.orders.filter((order) => {
     if (!orderQuery) return true;
     const name = order.customer?.name?.toLowerCase() || "";
-    const notes = (order.notes || "").toLowerCase();
-    return name.includes(orderQuery) || notes.includes(orderQuery);
+    const orderNumber = String(order.order_number ?? "").toLowerCase();
+    return name.includes(orderQuery) || orderNumber.includes(orderQuery);
   });
 
   const { key: orderKey, dir: orderDir } = state.sortOrders;
@@ -569,6 +581,7 @@ const renderAdmin = () => {
           data-order-id="${order.id}"
           value="${order.notes || ""}"
           placeholder="הערות"
+          readonly
         />
       </td>
     `;
@@ -1181,6 +1194,33 @@ const closeOrderModal = () => {
   orderModal.classList.add("hidden");
 };
 
+const openNotesPopover = (inputEl) => {
+  if (!inputEl) return;
+  activeNotesInput = inputEl;
+  notesTextarea.value = inputEl.value || "";
+  const rect = inputEl.getBoundingClientRect();
+  const top = rect.bottom + 8;
+  const left = Math.min(rect.left, window.innerWidth - 360);
+  notesPopover.style.top = `${Math.max(top, 12)}px`;
+  notesPopover.style.left = `${Math.max(left, 12)}px`;
+  notesPopover.classList.remove("hidden");
+  requestAnimationFrame(() => notesTextarea.focus());
+};
+
+const closeNotesPopover = (shouldSave = false) => {
+  if (!activeNotesInput) {
+    notesPopover.classList.add("hidden");
+    return;
+  }
+  if (shouldSave) {
+    const trimmed = notesTextarea.value.trim();
+    activeNotesInput.value = trimmed;
+    updateOrderField(activeNotesInput.dataset.orderId, "notes", trimmed);
+  }
+  notesPopover.classList.add("hidden");
+  activeNotesInput = null;
+};
+
 const setupListeners = () => {
   const updateSortIndicators = (tableEl, sortState) => {
     if (!tableEl) return;
@@ -1286,13 +1326,17 @@ const setupListeners = () => {
   });
 
   adminOrdersEl.addEventListener(
-    "blur",
+    "click",
     (event) => {
-      const target = event.target;
-      const field = target.dataset.orderField;
-      const id = target.dataset.orderId;
-      if (field !== "notes" || !id) return;
-      updateOrderField(id, "notes", target.value.trim());
+      const notesInput = event.target.closest(
+        'input[data-order-field="notes"]'
+      );
+      if (notesInput) {
+        event.preventDefault();
+        event.stopPropagation();
+        openNotesPopover(notesInput);
+        return;
+      }
     },
     true
   );
@@ -1304,6 +1348,20 @@ const setupListeners = () => {
     const order = state.orders.find((item) => item.id === row.dataset.orderId);
     if (!order) return;
     showOrderDetails(order);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (notesPopover.classList.contains("hidden")) return;
+    const isNotesInput = event.target.closest(
+      'input[data-order-field="notes"]'
+    );
+    if (notesPopover.contains(event.target) || isNotesInput) return;
+    closeNotesPopover(true);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeNotesPopover(false);
+    }
   });
 
   adminSearchInput.addEventListener("input", renderAdmin);
