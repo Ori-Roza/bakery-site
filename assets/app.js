@@ -1,7 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 const WHATSAPP_PHONE = "972501234567";
-const ORDER_EMAIL = "orders@birkat-yaakov.com";
+const ORDER_EMAIL = "ori.roza@bluevine.com";
 
 const SUPABASE_CONFIG = window.__SUPABASE__ || {};
 const supabaseClient =
@@ -160,9 +160,12 @@ const state = {
   editingCategoryId: null,
   creatingCategoryId: null,
   siteMetaId: null,
+  featuredProducts: [],
 };
 
-const categorySectionsEl = document.getElementById("category-sections");
+const featuredTrackEl = document.getElementById("featured-track");
+const productsScrollEl = document.getElementById("products-scroll");
+const productSearchInput = document.getElementById("product-search");
 const cartDrawer = document.getElementById("cart-drawer");
 const cartItemsEl = document.getElementById("cart-items");
 const cartTotalEl = document.getElementById("cart-total");
@@ -365,7 +368,9 @@ const ensureAdmin = () => {
 const getCartItems = () => {
   return Object.entries(state.cart)
     .map(([id, qty]) => {
-      const product = state.products.find((item) => item.id === id);
+      const product = state.products.find(
+        (item) => String(item.id) === String(id)
+      );
       if (!product) return null;
       return { ...product, qty, lineTotal: product.price * qty };
     })
@@ -377,6 +382,15 @@ const getCartTotals = () => {
   const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.lineTotal, 0);
   return { items, totalQty, totalPrice };
+};
+
+const pickRandomProducts = (items, count = 5) => {
+  const pool = [...items];
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
 };
 
 const updateCartUI = () => {
@@ -418,67 +432,72 @@ const updateCartUI = () => {
 };
 
 const renderProducts = () => {
-  const categoryLabels = state.products.map(getCategoryLabel);
-  const uniqueLabels = [...new Set(categoryLabels.filter(Boolean))];
-  const categories = state.categories.length
-    ? state.categories
-        .map((category) => category.name)
-        .filter((name) => uniqueLabels.includes(name))
-    : uniqueLabels;
-  categorySectionsEl.innerHTML = "";
-
-  const fallbackCategory = "מוצרים";
-  const hasCategories = categories.length > 0;
-  const categoryList = hasCategories ? categories : [fallbackCategory];
-
-  categoryList.forEach((category) => {
-    const section = document.createElement("section");
-    section.className = "space-y-4";
-    section.innerHTML = `
-      <div class="flex items-center justify-between">
-        <h4 class="text-xl font-semibold text-amber-900">${category}</h4>
-        <span class="text-sm text-stone-500">${new Date().getFullYear()}</span>
-      </div>
-      <div class="product-grid"></div>
-    `;
-
-    const grid = section.querySelector(".product-grid");
-    state.products
-      .filter((item) => {
-        if (!hasCategories) return true;
-        const label = getCategoryLabel(item) || fallbackCategory;
-        return label === category;
-      })
-      .forEach((product) => {
-        const card = document.createElement("article");
-        card.className = "product-card";
-        card.innerHTML = `
-          <img src="${product.image}" alt="${product.title}" class="product-image" />
-          <div class="product-content">
-            <div class="flex items-start justify-between gap-2">
-              <h5 class="font-semibold text-lg">${product.title}</h5>
-              <span class="text-amber-900 font-bold">${formatCurrency(
-                product.price
-              )}</span>
-            </div>
-            <p class="text-sm text-stone-500">${
-              getCategoryLabel(product) || fallbackCategory
-            }</p>
-            <button
-              class="primary-button"
-              data-action="add"
-              data-id="${product.id}"
-              ${product.inStock ? "" : "disabled"}
-            >
-              ${product.inStock ? "הוסף לסל" : "אזל מהמלאי"}
-            </button>
+  if (featuredTrackEl) {
+    featuredTrackEl.innerHTML = "";
+    const featured = state.featuredProducts.length
+      ? state.featuredProducts
+      : pickRandomProducts(state.products, 5);
+    featured.forEach((product) => {
+      const card = document.createElement("article");
+      card.className = "carousel-card";
+      card.innerHTML = `
+        <img src="${product.image}" alt="${product.title}" />
+        <div class="carousel-content">
+          <div class="flex items-start justify-between gap-2">
+            <h5 class="font-semibold text-lg">${product.title}</h5>
+            <span class="text-amber-900 font-bold">${formatCurrency(
+              product.price
+            )}</span>
           </div>
-        `;
-        grid.appendChild(card);
-      });
+          <button
+            class="primary-button"
+            data-action="add"
+            data-id="${product.id}"
+            ${product.inStock ? "" : "disabled"}
+          >
+            ${product.inStock ? "הוסף לסל" : "אזל מהמלאי"}
+          </button>
+        </div>
+      `;
+      featuredTrackEl.appendChild(card);
+    });
+  }
 
-    categorySectionsEl.appendChild(section);
-  });
+  if (productsScrollEl) {
+    const query = productSearchInput?.value?.trim().toLowerCase() || "";
+    const items = [...state.products]
+      .filter((product) =>
+        product.title.toLowerCase().includes(query)
+      )
+      .sort((a, b) => a.title.localeCompare(b.title, "he"))
+      .slice(0, 5);
+
+    productsScrollEl.innerHTML = "";
+    items.forEach((product) => {
+      const card = document.createElement("article");
+      card.className = "product-card";
+      card.innerHTML = `
+        <img src="${product.image}" alt="${product.title}" class="product-image" />
+        <div class="product-content">
+          <div class="flex items-start justify-between gap-2">
+            <h5 class="font-semibold text-lg">${product.title}</h5>
+            <span class="text-amber-900 font-bold">${formatCurrency(
+              product.price
+            )}</span>
+          </div>
+          <button
+            class="primary-button"
+            data-action="add"
+            data-id="${product.id}"
+            ${product.inStock ? "" : "disabled"}
+          >
+            ${product.inStock ? "הוסף לסל" : "אזל מהמלאי"}
+          </button>
+        </div>
+      `;
+      productsScrollEl.appendChild(card);
+    });
+  }
 };
 
 const renderAdmin = () => {
@@ -678,17 +697,30 @@ const closeCart = () => {
 };
 
 const addToCart = (id) => {
-  state.cart[id] = (state.cart[id] || 0) + 1;
+  const key = String(id);
+  state.cart[key] = (state.cart[key] || 0) + 1;
   updateCartUI();
   openCart();
 };
 
 const updateQty = (id, delta) => {
-  const next = (state.cart[id] || 0) + delta;
+  const key = String(id);
+  const next = (state.cart[key] || 0) + delta;
   if (next <= 0) {
-    delete state.cart[id];
+    delete state.cart[key];
   } else {
-    state.cart[id] = next;
+    state.cart[key] = next;
+  }
+  updateCartUI();
+};
+
+const setQty = (id, value) => {
+  const key = String(id);
+  const next = Number(value) || 0;
+  if (next <= 0) {
+    delete state.cart[key];
+  } else {
+    state.cart[key] = next;
   }
   updateCartUI();
 };
@@ -754,7 +786,7 @@ const handleCheckout = async (event) => {
   updateCartUI();
   await fetchOrders();
 
-  window.open(url, "_blank", "noopener");
+  window.location.href = url;
 };
 
 const handleCreateOrder = async () => {
@@ -964,16 +996,19 @@ const fetchProducts = async () => {
   if (error) {
     console.error(error);
     state.products = seedProducts;
+    state.featuredProducts = pickRandomProducts(state.products, 5);
     return;
   }
 
   if (!data || data.length === 0) {
     state.products = seedProducts;
+    state.featuredProducts = pickRandomProducts(state.products, 5);
     ensureCategoryOptions();
     return;
   }
 
   state.products = data.map(mapDbToProduct);
+  state.featuredProducts = pickRandomProducts(state.products, 5);
 };
 
 const fetchCategories = async () => {
@@ -1400,6 +1435,9 @@ const setupListeners = () => {
 
   adminSearchInput.addEventListener("input", renderAdmin);
   adminOrdersSearchInput.addEventListener("input", renderAdmin);
+  if (productSearchInput) {
+    productSearchInput.addEventListener("input", renderProducts);
+  }
   adminAboutSave.addEventListener("click", saveAboutContent);
   modalSave.addEventListener("click", handleAdminChange);
   modalClose.addEventListener("click", closeModal);
@@ -1507,18 +1545,6 @@ const setupListeners = () => {
     window.history.replaceState(null, "", "#admin");
   });
 
-  document.getElementById("reset-products").addEventListener("click", async () => {
-    if (!ensureSupabase()) return;
-    if (!ensureAdmin()) return;
-    await supabaseClient.from("products").delete().neq("id", "");
-    await supabaseClient
-      .from("products")
-      .insert(seedProducts.map(mapProductToDb));
-    await fetchProducts();
-    renderProducts();
-    renderAdmin();
-  });
-
   window.addEventListener("hashchange", updateRoute);
 };
 
@@ -1528,6 +1554,7 @@ const init = async () => {
 
   if (!supabaseClient) {
     state.products = seedProducts;
+    state.featuredProducts = pickRandomProducts(state.products, 5);
     renderProducts();
     updateCartUI();
     setAdminUI(false);
