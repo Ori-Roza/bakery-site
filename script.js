@@ -3,10 +3,12 @@ const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
 const navLinks = document.querySelectorAll('.nav-link');
 
-hamburger.addEventListener('click', () => {
-    navMenu.classList.toggle('active');
-    hamburger.classList.toggle('active');
-});
+if (hamburger && navMenu) {
+    hamburger.addEventListener('click', () => {
+        navMenu.classList.toggle('active');
+        hamburger.classList.toggle('active');
+    });
+}
 
 // Close mobile menu when clicking on a link
 navLinks.forEach(link => {
@@ -45,9 +47,14 @@ categoryBtns.forEach(btn => {
 // Smooth scrolling for navigation links (backup for browsers that don't support CSS scroll-behavior)
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+        const href = this.getAttribute('href');
+        // Skip placeholder links
+        if (href === '#') {
+            return;
+        }
+        const target = document.querySelector(href);
         if (target) {
+            e.preventDefault();
             const offsetTop = target.offsetTop - 70; // Account for fixed navbar
             window.scrollTo({
                 top: offsetTop,
@@ -60,34 +67,35 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // Contact Form Submission
 const contactForm = document.getElementById('contactForm');
 
-contactForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // Get form values
-    const formData = new FormData(contactForm);
-    
-    // Show success message (in a real app, this would send data to a server)
-    alert('Thank you for your message! We\'ll get back to you soon.');
-    
-    // Reset form
-    contactForm.reset();
-});
+if (contactForm) {
+    contactForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // Get form values
+        const formData = new FormData(contactForm);
+        
+        // Show success message (in a real app, this would send data to a server)
+        alert('Thank you for your message! We\'ll get back to you soon.');
+        
+        // Reset form
+        contactForm.reset();
+    });
+}
 
 // Navbar scroll effect
-let lastScroll = 0;
 const navbar = document.querySelector('.navbar');
 
-window.addEventListener('scroll', () => {
-    const currentScroll = window.pageYOffset;
+if (navbar) {
+    window.addEventListener('scroll', () => {
+        const currentScroll = window.pageYOffset;
 
-    if (currentScroll <= 0) {
-        navbar.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
-    } else {
-        navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.2)';
-    }
-
-    lastScroll = currentScroll;
-});
+        if (currentScroll <= 0) {
+            navbar.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+        } else {
+            navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.2)';
+        }
+    });
+}
 
 // Intersection Observer for animations on scroll
 const observerOptions = {
