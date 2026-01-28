@@ -1,6 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 const WHATSAPP_PHONE = "972501234567";
+const ORDER_EMAIL = "orders@birkat-yaakov.com";
 
 const SUPABASE_CONFIG = window.__SUPABASE__ || {};
 const supabaseClient =
@@ -158,6 +159,7 @@ const state = {
   categories: [],
   editingCategoryId: null,
   creatingCategoryId: null,
+  siteMetaId: null,
 };
 
 const categorySectionsEl = document.getElementById("category-sections");
@@ -180,6 +182,13 @@ const adminNewOrderButton = document.getElementById("admin-new-order");
 const adminProductsTable = document.getElementById("admin-products-table");
 const adminOrdersTable = document.getElementById("admin-orders-table");
 const adminOrdersSearchInput = document.getElementById("admin-orders-search");
+const orderDetailsModal = document.getElementById("order-details-modal");
+const orderDetailsClose = document.getElementById("order-details-close");
+const orderDetailsContent = document.getElementById("order-details-content");
+const aboutContentEl = document.getElementById("about-content");
+const adminAboutInput = document.getElementById("admin-about");
+const adminAboutSave = document.getElementById("admin-about-save");
+const adminAboutStatus = document.getElementById("admin-about-status");
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
@@ -218,6 +227,8 @@ const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
 
 const formatCurrency = (value) => `₪${Number(value).toFixed(0)}`;
+const DEFAULT_ABOUT =
+  "בית מאפה ברכת יעקב הוא מאפייה משפחתית עם אהבה לבצק, לחום של התנור ולטעמים של בית. אנו אופים מדי יום חלות, לחמים ומאפים טריים מחומרי גלם איכותיים, עם הקפדה על טריות, שירות אישי וחוויה נעימה לכל המשפחה.\n\nהמטרה שלנו היא לשלב בין מסורת לאיכות מודרנית — כדי שתוכלו ליהנות מארוחה חמה, שולחן שבת עשיר ורגעים מתוקים לאורך השבוע.";
 
 const mapDbToProduct = (row) => ({
   id: row.id,
@@ -393,7 +404,11 @@ const renderProducts = () => {
     : uniqueLabels;
   categorySectionsEl.innerHTML = "";
 
-  categories.forEach((category) => {
+  const fallbackCategory = "מוצרים";
+  const hasCategories = categories.length > 0;
+  const categoryList = hasCategories ? categories : [fallbackCategory];
+
+  categoryList.forEach((category) => {
     const section = document.createElement("section");
     section.className = "space-y-4";
     section.innerHTML = `
@@ -406,7 +421,11 @@ const renderProducts = () => {
 
     const grid = section.querySelector(".product-grid");
     state.products
-      .filter((item) => getCategoryLabel(item) === category)
+      .filter((item) => {
+        if (!hasCategories) return true;
+        const label = getCategoryLabel(item) || fallbackCategory;
+        return label === category;
+      })
       .forEach((product) => {
         const card = document.createElement("article");
         card.className = "product-card";
@@ -419,7 +438,9 @@ const renderProducts = () => {
                 product.price
               )}</span>
             </div>
-            <p class="text-sm text-stone-500">${getCategoryLabel(product)}</p>
+            <p class="text-sm text-stone-500">${
+              getCategoryLabel(product) || fallbackCategory
+            }</p>
             <button
               class="primary-button"
               data-action="add"
@@ -501,6 +522,9 @@ const renderAdmin = () => {
     } else if (orderKey === "created_at") {
       left = new Date(a.created_at).getTime();
       right = new Date(b.created_at).getTime();
+    } else if (orderKey === "order_number") {
+      left = Number(a.order_number) || 0;
+      right = Number(b.order_number) || 0;
     } else if (orderKey === "paid") {
       left = a.paid ? 1 : 0;
       right = b.paid ? 1 : 0;
@@ -518,14 +542,16 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='5' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
+      "<td colspan='6' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
 
   filteredOrders.forEach((order) => {
     const row = document.createElement("tr");
+    row.dataset.orderId = order.id;
     row.innerHTML = `
+      <td>${order.order_number ?? ""}</td>
       <td>${order.customer.name}</td>
       <td>${new Date(order.created_at).toLocaleString("he-IL")}</td>
       <td class="text-amber-900 font-semibold">${formatCurrency(
@@ -568,6 +594,40 @@ const setAdminUI = (isAuthenticated) => {
   adminLogoutButton.classList.toggle("hidden", !isAuthenticated);
 };
 
+const setAboutContent = (text) => {
+  if (!aboutContentEl) return;
+  const safeText = (text || DEFAULT_ABOUT).trim();
+  aboutContentEl.innerHTML = safeText.replace(/\n/g, "<br />");
+  if (adminAboutInput) {
+    adminAboutInput.value = safeText;
+  }
+};
+
+const uploadProductImage = async (file, prefix) => {
+  if (!file) return null;
+  if (!ensureSupabase()) return null;
+  const ext = file.name.split(".").pop();
+  const fileName = `${prefix}-${Date.now()}.${ext}`;
+  const filePath = `products/${fileName}`;
+
+  const { error } = await supabaseClient
+    .storage
+    .from("product-images")
+    .upload(filePath, file, { upsert: true });
+
+  if (error) {
+    console.error(error);
+    alert("העלאת התמונה נכשלה.");
+    return null;
+  }
+
+  const { data } = supabaseClient.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
 const openCart = () => {
   cartDrawer.classList.add("open");
   overlay.classList.remove("hidden");
@@ -594,8 +654,7 @@ const updateQty = (id, delta) => {
   updateCartUI();
 };
 
-const buildWhatsAppMessage = ({ name, phone, date, time }) => {
-  const { items, totalPrice } = getCartTotals();
+const buildOrderMessage = ({ name, phone, date, time, items, totalPrice }) => {
   const lines = items.map((item) => `${item.title} x ${item.qty}`).join("\n");
   return (
     `שלום יעקב, הזמנה חדשה מהאתר:\n${lines}` +
@@ -624,10 +683,17 @@ const handleCheckout = async (event) => {
     return;
   }
 
-  const message = buildWhatsAppMessage(payload);
-  const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
-    message
-  )}`;
+  const message = buildOrderMessage({
+    ...payload,
+    items,
+    totalPrice,
+  });
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const url = isMobile
+    ? `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`
+    : `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent(
+        "הזמנה חדשה מהאתר"
+      )}&body=${encodeURIComponent(message)}`;
 
   const { error } = await supabaseClient.from("orders").insert([
     {
@@ -713,11 +779,16 @@ const handleAdminChange = async () => {
 
   const category = state.categories.find((item) => item.id === categoryId);
 
+  let imageUrl = product.image;
+  if (modalImage?.files?.length) {
+    imageUrl = await uploadProductImage(modalImage.files[0], product.id);
+  }
+
   product.title = modalTitle.value.trim();
   product.price = Number(modalPrice.value) || 0;
   product.categoryId = categoryId;
   product.categoryName = category?.name || product.categoryName || "";
-  product.image = modalImage.value.trim();
+  product.image = imageUrl;
   product.inStock = modalStock.checked;
 
   await supabaseClient
@@ -745,13 +816,22 @@ const handleCreateProduct = async () => {
   }
 
   const category = state.categories.find((item) => item.id === categoryId);
+  if (!createImage?.files?.length) {
+    alert("יש להעלות תמונה למוצר.");
+    return;
+  }
+  const uploadedUrl = await uploadProductImage(
+    createImage.files[0],
+    createTitle.value.trim() || "product"
+  );
+  if (!uploadedUrl) return;
   const product = {
     id: generateId(createTitle.value),
     title: createTitle.value.trim(),
     price: Number(createPrice.value) || 0,
     categoryId,
     categoryName: category?.name || "",
-    image: createImage.value.trim(),
+    image: uploadedUrl,
     inStock: true,
   };
 
@@ -766,7 +846,8 @@ const handleCreateProduct = async () => {
 
   createTitle.value = "";
   createPrice.value = "";
-  createCategory.value = "";
+  state.creatingCategoryId = null;
+  setCategoryTriggerLabel(createCategoryTrigger, "בחר קטגוריה");
   createImage.value = "";
   closeCreateModal();
   await fetchProducts();
@@ -839,7 +920,7 @@ const fetchProducts = async () => {
   const { data, error } = await supabaseClient
     .from("products")
     .select("id,title,price,image,in_stock,category_id,categories(name)")
-    .order("category", { ascending: true });
+    .order("name", { foreignTable: "categories", ascending: true });
 
   if (error) {
     console.error(error);
@@ -871,6 +952,77 @@ const fetchCategories = async () => {
 
   state.categories = data || [];
   ensureCategoryOptions();
+};
+
+const fetchSiteMeta = async () => {
+  if (!ensureSupabase()) {
+    setAboutContent(DEFAULT_ABOUT);
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("site_metadata")
+    .select("id,about_section")
+    .limit(1);
+
+  if (error) {
+    console.error(error);
+    setAboutContent(DEFAULT_ABOUT);
+    return;
+  }
+
+  if (!data || !data.length) {
+    setAboutContent(DEFAULT_ABOUT);
+    state.siteMetaId = null;
+    return;
+  }
+
+  state.siteMetaId = data[0].id;
+  setAboutContent(data[0].about_section || DEFAULT_ABOUT);
+};
+
+const saveAboutContent = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (adminAboutStatus) {
+    adminAboutStatus.textContent = "שומר...";
+    adminAboutStatus.className = "text-sm mt-2 text-stone-500";
+  }
+  const text = adminAboutInput.value.trim();
+  if (!text) {
+    alert("יש להזין טקסט אודות.");
+    if (adminAboutStatus) {
+      adminAboutStatus.textContent = "שגיאה: נא להזין טקסט אודות.";
+      adminAboutStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  const payload = { about_section: text };
+  let error;
+  if (state.siteMetaId) {
+    ({ error } = await supabaseClient
+      .from("site_metadata")
+      .update(payload)
+      .eq("id", state.siteMetaId));
+  } else {
+    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  }
+
+  if (error) {
+    console.error(error);
+    alert("לא ניתן לשמור אודות כרגע.");
+    if (adminAboutStatus) {
+      adminAboutStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminAboutStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  await fetchSiteMeta();
+  if (adminAboutStatus) {
+    adminAboutStatus.textContent = "נשמר בהצלחה";
+    adminAboutStatus.className = "text-sm mt-2 text-amber-900";
+  }
 };
 
 const fetchOrders = async () => {
@@ -942,6 +1094,25 @@ const updateOrderField = async (id, field, value) => {
   renderAdmin();
 };
 
+const showOrderDetails = (order) => {
+  const items = (order.items || [])
+    .map((item) => `${item.title} x ${item.qty}`)
+    .join("<br />");
+  orderDetailsContent.innerHTML = `
+    <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? ""}</div>
+    <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
+    <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
+    <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
+      "he-IL"
+    )}</div>
+    <div><strong>סכום:</strong> ${formatCurrency(order.total)}</div>
+    <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
+    <div><strong>הערות:</strong> ${order.notes || "-"}</div>
+    <div><strong>פריטים:</strong><br />${items || "-"}</div>
+  `;
+  orderDetailsModal.classList.remove("hidden");
+};
+
 const openModal = (product) => {
   state.editingProductId = product.id;
   modalTitle.value = product.title;
@@ -949,7 +1120,7 @@ const openModal = (product) => {
   state.editingCategoryId = product.categoryId;
   ensureCategoryOptions();
   setCategoryTriggerLabel(modalCategoryTrigger, getCategoryLabel(product));
-  modalImage.value = product.image;
+  modalImage.value = "";
   modalStock.checked = product.inStock;
   productModal.classList.remove("hidden");
 };
@@ -1069,7 +1240,9 @@ const setupListeners = () => {
 
     const row = event.target.closest("tr");
     if (row && row.dataset.id && row.parentElement === adminProductsEl) {
-      const product = state.products.find((item) => item.id === row.dataset.id);
+      const product = state.products.find(
+        (item) => String(item.id) === row.dataset.id
+      );
       if (product) {
         openModal(product);
       }
@@ -1097,6 +1270,9 @@ const setupListeners = () => {
   adminNewOrderButton.addEventListener("click", openOrderModal);
   orderModalClose.addEventListener("click", closeOrderModal);
   orderSave.addEventListener("click", handleCreateOrder);
+  orderDetailsClose.addEventListener("click", () => {
+    orderDetailsModal.classList.add("hidden");
+  });
 
   adminOrdersEl.addEventListener("change", (event) => {
     const target = event.target;
@@ -1121,8 +1297,18 @@ const setupListeners = () => {
     true
   );
 
+  adminOrdersEl.addEventListener("click", (event) => {
+    if (event.target.closest("input")) return;
+    const row = event.target.closest("tr");
+    if (!row || !row.dataset.orderId) return;
+    const order = state.orders.find((item) => item.id === row.dataset.orderId);
+    if (!order) return;
+    showOrderDetails(order);
+  });
+
   adminSearchInput.addEventListener("input", renderAdmin);
   adminOrdersSearchInput.addEventListener("input", renderAdmin);
+  adminAboutSave.addEventListener("click", saveAboutContent);
   modalSave.addEventListener("click", handleAdminChange);
   modalClose.addEventListener("click", closeModal);
   modalDelete.addEventListener("click", () => {
@@ -1212,6 +1398,7 @@ const init = async () => {
     renderProducts();
     updateCartUI();
     setAdminUI(false);
+    setAboutContent(DEFAULT_ABOUT);
     if (window.lucide) {
       window.lucide.createIcons();
     }
@@ -1220,6 +1407,7 @@ const init = async () => {
 
   await fetchCategories();
   await fetchProducts();
+  await fetchSiteMeta();
   renderProducts();
   updateCartUI();
   await openAdminIfSession();
