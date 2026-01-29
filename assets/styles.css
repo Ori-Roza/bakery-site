@@ -472,10 +472,12 @@
   overflow: hidden;
   max-height: 360px;
   overflow-y: auto;
+  overflow-x: auto;
 }
 
 .admin-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   background: #fffaf5;
 }

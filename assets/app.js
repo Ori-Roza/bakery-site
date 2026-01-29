@@ -12,144 +12,6 @@ const supabaseClient =
     ? createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
     : null;
 
-const seedProducts = [
-  {
-    id: "challah-classic",
-    title: "חלת שבת קלועה (רגילה)",
-    price: 20,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "challah-sweet",
-    title: "חלה מתוקה (עם צימוקים/מתוקה במיוחד)",
-    price: 24,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "spelt-challah",
-    title: "חלת כוסמין מלא",
-    price: 28,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "sourdough",
-    title: "לחם מחמצת כפרי (כיכר)",
-    price: 32,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "grain-loaf",
-    title: "לחם דגנים מלא",
-    price: 29,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1483695028939-5bb13f8648b0?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "baguette",
-    title: "בגט צרפתי קלאסי",
-    price: 12,
-    category: "חלות ולחמים לשבת",
-    image:
-      "https://images.unsplash.com/photo-1511914265871-bcd2d46e1d20?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "rugelach",
-    title: "רוגלך שוקולד (מארז של כ-10 יח')",
-    price: 35,
-    category: "מאפים מתוקים",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "croissant",
-    title: "קרואסון חמאה קלאסי (יחידה)",
-    price: 14,
-    category: "מאפים מתוקים",
-    image:
-      "https://images.unsplash.com/photo-1514517220017-8ce97a34a7b6?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "croissant-choco",
-    title: "קרואסון שוקולד / שקדים (יחידה)",
-    price: 16,
-    category: "מאפים מתוקים",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "yeast-cake",
-    title: "פס עוגת שמרים (שוקולד / קינמון / גבינה)",
-    price: 42,
-    category: "מאפים מתוקים",
-    image:
-      "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "cookies",
-    title: "מארז עוגיות ביתיות (עוגיות חמאה/טחינה)",
-    price: 30,
-    category: "מאפים מתוקים",
-    image:
-      "https://images.unsplash.com/photo-1481391319762-47dff72954d9?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "burekas",
-    title: "בורקס גבינה / תפו\"א (גדול, יחידה)",
-    price: 10,
-    category: "מאפים מלוחים",
-    image:
-      "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "burekas-box",
-    title: "מארז בורקסים קטנים (מיקס)",
-    price: 40,
-    category: "מאפים מלוחים",
-    image:
-      "https://images.unsplash.com/photo-1604908811579-71e2d7bf47a0?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "ziva",
-    title: "מאפה זיווה (עם רסק וביצה)",
-    price: 28,
-    category: "מאפים מלוחים",
-    image:
-      "https://images.unsplash.com/photo-1607346256330-dee7af15f7c5?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-  {
-    id: "personal-pizza",
-    title: "פיצה אישית מהטאבון",
-    price: 25,
-    category: "מאפים מלוחים",
-    image:
-      "https://images.unsplash.com/photo-1548365328-8b849e6f7c2a?auto=format&fit=crop&w=900&q=80",
-    inStock: true,
-  },
-];
-
 const state = {
   products: [],
   cart: {},
@@ -220,6 +82,7 @@ const modalCategorySearch = document.getElementById("modal-category-search");
 const modalCategoryList = document.getElementById("modal-category-list");
 const modalImage = document.getElementById("modal-image");
 const modalStock = document.getElementById("modal-stock");
+const modalStatus = document.getElementById("modal-status");
 const openCreateModal = document.getElementById("open-create-modal");
 const createModal = document.getElementById("create-modal");
 const createModalClose = document.getElementById("create-modal-close");
@@ -266,17 +129,55 @@ const mapDbToProduct = (row) => ({
   inStock: row.in_stock,
 });
 
-const mapProductToDb = (product) => ({
-  id: product.id,
-  title: product.title,
-  price: product.price,
-  category_id: product.categoryId || product.category_id || null,
-  image: product.image,
-  in_stock: product.inStock,
-});
+const mapProductToDb = (product, { includeId = false } = {}) => {
+  const payload = {
+    title: product.title,
+    price: product.price,
+    category_id: normalizeCategoryId(
+      product.categoryId || product.category_id || null
+    ),
+    image: product.image,
+    in_stock: product.inStock,
+  };
+  if (includeId) {
+    const numericId = Number(product.id);
+    if (Number.isFinite(numericId)) {
+      payload.id = numericId;
+    }
+  }
+  return payload;
+};
 
-const getCategoryLabel = (product) =>
-  product.categoryName || product.category || "";
+const getCategoryLabel = (product) => {
+  if (product.categoryName || product.category) {
+    return product.categoryName || product.category || "";
+  }
+  const category = state.categories.find(
+    (item) => String(item.category_id) === String(product.categoryId)
+  );
+  return category?.category_name || "";
+};
+
+const normalizeCategoryId = (value) => {
+  console.log("[normalizeCategoryId] Input:", value, "Type:", typeof value);
+  if (value === null || value === undefined || value === "") {
+    console.log("[normalizeCategoryId] Value is null/undefined/empty, returning null");
+    return null;
+  }
+  const asNumber = Number(value);
+  if (Number.isFinite(asNumber)) {
+    console.log("[normalizeCategoryId] Converted to number:", asNumber);
+    return asNumber;
+  }
+  const match = state.categories.find((item) => item.category_name === value);
+  console.log("[normalizeCategoryId] Looked up by name, found:", match);
+  return match ? match.category_id : null;
+};
+
+const normalizeProductId = (value) => {
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : null;
+};
 
 const ensureCategoryOptions = () => {
   renderCategoryDropdown(modalCategoryDropdown, {
@@ -304,14 +205,10 @@ const renderCategoryDropdown = (dropdownEl, config) => {
   if (!dropdownEl) return;
   const { searchInput, listEl, getSelectedId, setSelectedId, triggerEl } = config;
   const query = searchInput?.value?.trim().toLowerCase() || "";
-  const categories = state.categories.length
-    ? state.categories
-    : Array.from(
-        new Set(seedProducts.map((product) => product.category))
-      ).map((name) => ({ id: name, name }));
+  const categories = state.categories.length ? state.categories : [];
 
   const filtered = categories.filter((category) =>
-    category.name.toLowerCase().includes(query)
+    category.category_name.toLowerCase().includes(query)
   );
 
   listEl.innerHTML = "";
@@ -319,13 +216,17 @@ const renderCategoryDropdown = (dropdownEl, config) => {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "dropdown-item";
-    if (getSelectedId() === category.id) {
+    if (getSelectedId() === category.category_id) {
       item.classList.add("active");
     }
-    item.textContent = category.name;
+    item.textContent = category.category_name;
     item.addEventListener("click", () => {
-      setSelectedId(category.id);
-      setCategoryTriggerLabel(triggerEl, category.name);
+      setSelectedId(category.category_id);
+      setCategoryTriggerLabel(
+        triggerEl,
+        category.category_name,
+        category.category_id
+      );
       dropdownEl.classList.remove("open");
     });
     listEl.appendChild(item);
@@ -342,9 +243,15 @@ const renderCategoryDropdown = (dropdownEl, config) => {
   listEl.appendChild(createLink);
 };
 
-const setCategoryTriggerLabel = (triggerEl, label) => {
+const setCategoryTriggerLabel = (triggerEl, label, selectedId = null) => {
   if (!triggerEl) return;
   triggerEl.textContent = label || "בחר קטגוריה";
+  if (selectedId !== null && selectedId !== undefined) {
+    triggerEl.dataset.selectedId = String(selectedId);
+    console.log("[setCategoryTriggerLabel] Persisted selectedId:", selectedId, "trigger:", triggerEl);
+  } else {
+    console.log("[setCategoryTriggerLabel] No selectedId provided");
+  }
 };
 
 const ensureSupabase = () => {
@@ -830,13 +737,33 @@ const handleAdminChange = async () => {
   );
   if (!product) return;
 
-  const categoryId = state.editingCategoryId;
-  if (!categoryId) {
-    alert("יש לבחור קטגוריה.");
+  const productId = normalizeProductId(product.id);
+  if (!productId) {
+    if (modalStatus) {
+      modalStatus.textContent = "מזהה מוצר לא תקין. יש לרענן את הדף.";
+      modalStatus.className = "text-sm mt-2 text-rose-600";
+    }
     return;
   }
 
-  const category = state.categories.find((item) => item.id === categoryId);
+  const categoryId = normalizeCategoryId(
+    state.editingCategoryId || modalCategoryTrigger?.dataset?.selectedId
+  );
+  console.log("[handleAdminChange] state.editingCategoryId:", state.editingCategoryId);
+  console.log("[handleAdminChange] trigger.dataset.selectedId:", modalCategoryTrigger?.dataset?.selectedId);
+  console.log("[handleAdminChange] Resolved categoryId:", categoryId);
+  if (!categoryId) {
+    if (modalStatus) {
+      modalStatus.textContent = "יש לבחור קטגוריה.";
+      modalStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    console.error("[handleAdminChange] No valid categoryId");
+    return;
+  }
+
+  const category = state.categories.find(
+    (item) => item.category_id === categoryId
+  );
 
   let imageUrl = product.image;
   if (modalImage?.files?.length) {
@@ -846,14 +773,24 @@ const handleAdminChange = async () => {
   product.title = modalTitle.value.trim();
   product.price = Number(modalPrice.value) || 0;
   product.categoryId = categoryId;
-  product.categoryName = category?.name || product.categoryName || "";
+  product.categoryName = category?.category_name || product.categoryName || "";
   product.image = imageUrl;
   product.inStock = modalStock.checked;
 
-  await supabaseClient
+  const { error } = await supabaseClient
     .from("products")
     .update(mapProductToDb(product))
-    .eq("id", product.id);
+    .eq("id", productId);
+  if (error) {
+    console.error(error);
+    if (modalStatus) {
+      modalStatus.textContent = `עדכון המוצר נכשל: ${
+        error.message || "שגיאה לא ידועה"
+      }`;
+      modalStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
 
   await fetchProducts();
   renderProducts();
@@ -868,13 +805,15 @@ const handleCreateProduct = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
 
-  const categoryId = state.creatingCategoryId;
+  const categoryId = normalizeCategoryId(state.creatingCategoryId);
   if (!categoryId) {
     alert("יש לבחור קטגוריה.");
     return;
   }
 
-  const category = state.categories.find((item) => item.id === categoryId);
+  const category = state.categories.find(
+    (item) => item.category_id === categoryId
+  );
   if (!createImage?.files?.length) {
     alert("יש להעלות תמונה למוצר.");
     return;
@@ -885,11 +824,10 @@ const handleCreateProduct = async () => {
   );
   if (!uploadedUrl) return;
   const product = {
-    id: generateId(createTitle.value),
     title: createTitle.value.trim(),
     price: Number(createPrice.value) || 0,
     categoryId,
-    categoryName: category?.name || "",
+    categoryName: category?.category_name || "",
     image: uploadedUrl,
     inStock: true,
   };
@@ -918,7 +856,21 @@ const handleDeleteProduct = async (id) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
 
-  await supabaseClient.from("products").delete().eq("id", id);
+  const productId = normalizeProductId(id);
+  if (!productId) {
+    alert("מזהה מוצר לא תקין. יש לרענן את הדף.");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("products")
+    .delete()
+    .eq("id", productId);
+  if (error) {
+    console.error(error);
+    alert(`מחיקת המוצר נכשלה: ${error.message || "שגיאה לא ידועה"}`);
+    return;
+  }
   await fetchProducts();
   renderProducts();
   renderAdmin();
@@ -978,19 +930,21 @@ const fetchProducts = async () => {
 
   const { data, error } = await supabaseClient
     .from("products")
-    .select("id,title,price,image,in_stock,category_id,categories(name)")
-    .order("name", { foreignTable: "categories", ascending: true });
+    .select("id,title,price,image,in_stock,category_id")
+    .order("id", { ascending: true });
+
+  console.log("[fetchProducts] data:", data);
 
   if (error) {
-    console.error(error);
-    state.products = seedProducts;
-    state.featuredProducts = pickRandomProducts(state.products, 5);
+    console.error("[fetchProducts] error:", error);
+    state.products = [];
+    state.featuredProducts = [];
     return;
   }
 
   if (!data || data.length === 0) {
-    state.products = seedProducts;
-    state.featuredProducts = pickRandomProducts(state.products, 5);
+    state.products = [];
+    state.featuredProducts = [];
     ensureCategoryOptions();
     return;
   }
@@ -1000,19 +954,27 @@ const fetchProducts = async () => {
 };
 
 const fetchCategories = async () => {
-  if (!ensureSupabase()) return;
+  if (!ensureSupabase()) {
+    console.log("[fetchCategories] Supabase not configured, skipping");
+    return;
+  }
+  console.log("[fetchCategories] Fetching from database...");
   const { data, error } = await supabaseClient
     .from("categories")
-    .select("id,name,sort_order")
-    .order("sort_order", { ascending: true });
+    .select("id,name");
 
   if (error) {
-    console.error(error);
+    console.error("[fetchCategories] Error:", error);
     state.categories = [];
     return;
   }
 
-  state.categories = data || [];
+  console.log("[fetchCategories] Fetched raw data:", data);
+  state.categories = (data || []).map((item) => ({
+    category_id: item.id,
+    category_name: item.name,
+  }));
+  console.log("[fetchCategories] Mapped categories:", state.categories);
   ensureCategoryOptions();
 };
 
@@ -1176,14 +1138,38 @@ const showOrderDetails = (order) => {
 };
 
 const openModal = (product) => {
+  console.log("[openModal] Opening for product:", product);
   state.editingProductId = product.id;
   modalTitle.value = product.title;
   modalPrice.value = product.price;
-  state.editingCategoryId = product.categoryId;
+  const initialCategoryId = normalizeCategoryId(product.categoryId);
+  console.log("[openModal] After normalizeProductId, initialCategoryId:", initialCategoryId);
+  if (initialCategoryId) {
+    state.editingCategoryId = initialCategoryId;
+    console.log("[openModal] Using normalizedId, set state.editingCategoryId:", initialCategoryId);
+  } else if (product.categoryName || product.category) {
+    const match = state.categories.find(
+      (item) => item.category_name === (product.categoryName || product.category)
+    );
+    state.editingCategoryId = match ? match.category_id : null;
+    console.log("[openModal] Looked up by name, state.editingCategoryId:", state.editingCategoryId);
+  } else {
+    state.editingCategoryId = null;
+    console.log("[openModal] No category info, set state.editingCategoryId to null");
+  }
   ensureCategoryOptions();
-  setCategoryTriggerLabel(modalCategoryTrigger, getCategoryLabel(product));
+  console.log("[openModal] Before setCategoryTriggerLabel, state.editingCategoryId:", state.editingCategoryId);
+  setCategoryTriggerLabel(
+    modalCategoryTrigger,
+    getCategoryLabel(product),
+    state.editingCategoryId
+  );
   modalImage.value = "";
   modalStock.checked = product.inStock;
+  if (modalStatus) {
+    modalStatus.textContent = "";
+    modalStatus.className = "text-sm mt-2";
+  }
   productModal.classList.remove("hidden");
 };
 
@@ -1194,8 +1180,12 @@ const closeModal = () => {
 
 const openCreateProductModal = () => {
   if (!state.creatingCategoryId && state.categories.length) {
-    state.creatingCategoryId = state.categories[0].id;
-    setCategoryTriggerLabel(createCategoryTrigger, state.categories[0].name);
+    state.creatingCategoryId = state.categories[0].category_id;
+    setCategoryTriggerLabel(
+      createCategoryTrigger,
+      state.categories[0].category_name,
+      state.categories[0].category_id
+    );
   }
   ensureCategoryOptions();
   createModal.classList.remove("hidden");
@@ -1510,6 +1500,7 @@ const setupListeners = () => {
 };
 
 const init = async () => {
+  console.log("[init] Starting initialization...");
   setupListeners();
   updateRoute();
 
@@ -1528,8 +1519,9 @@ const init = async () => {
   }
 
   if (!supabaseClient) {
-    state.products = seedProducts;
-    state.featuredProducts = pickRandomProducts(state.products, 5);
+    console.log("[init] No Supabase client, exiting early");
+    state.products = [];
+    state.featuredProducts = [];
     renderProducts();
     updateCartUI();
     setAdminUI(false);
@@ -1540,8 +1532,13 @@ const init = async () => {
     return;
   }
 
+  console.log("[init] Supabase client found, fetching categories...");
   await fetchCategories();
+  console.log("[init] After fetchCategories, state.categories:", state.categories);
+  
   await fetchProducts();
+  console.log("[init] After fetchProducts, state.products.length:", state.products.length);
+  
   await fetchSiteMeta();
   renderProducts();
   updateCartUI();
