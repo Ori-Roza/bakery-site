@@ -91,9 +91,11 @@ img {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 280px));
-  gap: clamp(1.5rem, 3vw, 2.5rem);
+  grid-template-columns: repeat(auto-fill, 280px);
+  gap: clamp(3rem, 5vw, 4.5rem);
   justify-content: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 640px) {
@@ -106,7 +108,7 @@ img {
 .scroll-grid {
   max-height: 520px;
   overflow-y: auto;
-  padding-inline-end: 0.5rem;
+  padding-inline-end: 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -162,7 +164,7 @@ img {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 280px;
-  gap: clamp(1.5rem, 3vw, 2.5rem);
+  gap: clamp(3rem, 5vw, 4.5rem);
   overflow-x: auto;
   width: 100%;
   box-sizing: border-box;
