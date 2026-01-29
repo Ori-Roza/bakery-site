@@ -102,6 +102,10 @@ const contactPhoneEl = document.getElementById("contact-phone");
 const contactWhatsappEl = document.getElementById("contact-whatsapp");
 const contactEmailEl = document.getElementById("contact-email");
 const contactEmailTextEl = document.getElementById("contact-email-text");
+const siteLogoEl = document.getElementById("site-logo");
+const adminLogoPreview = document.getElementById("admin-logo-preview");
+const adminLogoReplaceBtn = document.getElementById("admin-logo-replace-btn");
+const adminLogoInput = document.getElementById("admin-logo-input");
 const notesPopover = document.createElement("div");
 notesPopover.id = "notes-popover";
 notesPopover.className = "notes-popover hidden";
@@ -292,7 +296,8 @@ const getCartTotals = () => {
 };
 
 const pickRandomProducts = (items, count = 5) => {
-  const pool = [...items];
+  const inStockItems = items.filter(item => item.inStock);
+  const pool = [...inStockItems];
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -476,6 +481,9 @@ const renderAdmin = () => {
     } else if (orderKey === "paid") {
       left = a.paid ? 1 : 0;
       right = b.paid ? 1 : 0;
+    } else if (orderKey === "deleted") {
+      left = a.deleted ? 1 : 0;
+      right = b.deleted ? 1 : 0;
     } else {
       left = Number(a[orderKey]) || 0;
       right = Number(b[orderKey]) || 0;
@@ -490,7 +498,7 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='6' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
+      "<td colspan='7' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
@@ -498,6 +506,10 @@ const renderAdmin = () => {
   filteredOrders.forEach((order) => {
     const row = document.createElement("tr");
     row.dataset.orderId = order.id;
+    if (order.deleted) {
+      row.style.opacity = "0.5";
+      row.style.textDecoration = "line-through";
+    }
     row.innerHTML = `
       <td>${order.order_number ?? ""}</td>
       <td>${order.customer.name}</td>
@@ -519,6 +531,11 @@ const renderAdmin = () => {
           placeholder="הערות"
           readonly
         />
+      </td>
+      <td>
+        <input type="checkbox" class="form-checkbox" data-order-field="deleted" data-order-id="${
+          order.id
+        }" ${order.deleted ? "checked" : ""} ${order.paid ? "disabled" : ""} />
       </td>
     `;
     adminOrdersEl.appendChild(row);
@@ -985,7 +1002,7 @@ const fetchSiteMeta = async () => {
   }
   const { data, error } = await supabaseClient
     .from("site_metadata")
-    .select("id,about_section")
+    .select("id,about_section,logo_url")
     .limit(1);
 
   if (error) {
@@ -1002,6 +1019,11 @@ const fetchSiteMeta = async () => {
 
   state.siteMetaId = data[0].id;
   setAboutContent(data[0].about_section || DEFAULT_ABOUT);
+  
+  // Update logo if URL exists in database
+  if (data[0].logo_url) {
+    setLogo(data[0].logo_url);
+  }
 };
 
 const saveAboutContent = async () => {
@@ -1047,6 +1069,88 @@ const saveAboutContent = async () => {
     adminAboutStatus.textContent = "נשמר בהצלחה";
     adminAboutStatus.className = "text-sm mt-2 text-amber-900";
   }
+};
+
+const setLogo = (url) => {
+  if (siteLogoEl) {
+    siteLogoEl.src = url;
+  }
+  if (adminLogoPreview) {
+    adminLogoPreview.src = url;
+  }
+};
+
+const uploadLogoImage = async (file) => {
+  if (!file) return null;
+  if (!ensureSupabase()) return null;
+  
+  const ext = file.name.split(".").pop();
+  const fileName = `logo-${Date.now()}.${ext}`;
+  const filePath = `logos/${fileName}`;
+
+  const { error } = await supabaseClient
+    .storage
+    .from("product-images")
+    .upload(filePath, file, { upsert: true });
+
+  if (error) {
+    console.error(error);
+    alert("העלאת הלוגו נכשלה.");
+    return null;
+  }
+
+  const { data } = supabaseClient.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
+const saveLogoImage = async (file) => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  
+  if (!file) {
+    alert("יש לבחור קובץ תמונה.");
+    return;
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    alert("יש לבחור קובץ תמונה בלבד.");
+    return;
+  }
+
+  const logoUrl = await uploadLogoImage(file);
+  if (!logoUrl) {
+    return;
+  }
+
+  const payload = { logo_url: logoUrl };
+  let error;
+  
+  if (state.siteMetaId) {
+    ({ error } = await supabaseClient
+      .from("site_metadata")
+      .update(payload)
+      .eq("id", state.siteMetaId));
+  } else {
+    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  }
+
+  if (error) {
+    console.error(error);
+    alert("לא ניתן לשמור לוגו כרגע.");
+    return;
+  }
+
+  setLogo(logoUrl);
+  await fetchSiteMeta();
+  
+  alert("הלוגו נשמר בהצלחה!");
+  
+  // Clear the file input
+  adminLogoInput.value = "";
 };
 
 const fetchOrders = async () => {
@@ -1374,6 +1478,17 @@ const setupListeners = () => {
 
     if (field === "paid") {
       updateOrderField(id, "paid", target.checked);
+      return;
+    }
+
+    if (field === "deleted") {
+      const order = state.orders.find((item) => String(item.id) === String(id));
+      if (order?.paid) {
+        target.checked = false;
+        alert("לא ניתן למחוק הזמנה ששולמה.");
+        return;
+      }
+      updateOrderField(id, "deleted", target.checked);
     }
   });
 
@@ -1422,6 +1537,23 @@ const setupListeners = () => {
     productSearchInput.addEventListener("input", renderProducts);
   }
   adminAboutSave.addEventListener("click", saveAboutContent);
+  
+  // Logo replacement button and file input handlers
+  if (adminLogoReplaceBtn) {
+    adminLogoReplaceBtn.addEventListener("click", () => {
+      adminLogoInput.click();
+    });
+  }
+  
+  if (adminLogoInput) {
+    adminLogoInput.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        await saveLogoImage(file);
+      }
+    });
+  }
+  
   modalSave.addEventListener("click", handleAdminChange);
   modalClose.addEventListener("click", closeModal);
   modalDelete.addEventListener("click", () => {
