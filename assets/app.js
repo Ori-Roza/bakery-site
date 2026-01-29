@@ -195,13 +195,6 @@ const aboutContentEl = document.getElementById("about-content");
 const adminAboutInput = document.getElementById("admin-about");
 const adminAboutSave = document.getElementById("admin-about-save");
 const adminAboutStatus = document.getElementById("admin-about-status");
-const adminSetPasswordEl = document.getElementById("admin-set-password");
-const adminSetPasswordForm = document.getElementById("admin-set-password-form");
-const adminNewPassword = document.getElementById("admin-new-password");
-const adminConfirmPassword = document.getElementById("admin-confirm-password");
-const adminSetPasswordStatus = document.getElementById(
-  "admin-set-password-status"
-);
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
@@ -630,6 +623,9 @@ const updateRoute = () => {
   adminSection.classList.toggle("hidden", !isAdmin);
   document.getElementById("catalog").classList.toggle("hidden", isAdmin);
   document.getElementById("checkout").classList.toggle("hidden", isAdmin);
+  document.getElementById("contact")?.classList.toggle("hidden", isAdmin);
+  document.getElementById("about")?.classList.toggle("hidden", isAdmin);
+  document.getElementById("hero")?.classList.toggle("hidden", isAdmin);
   if (!isAdmin) {
     document.getElementById("catalog").classList.remove("hidden");
     document.getElementById("checkout").classList.remove("hidden");
@@ -641,25 +637,8 @@ const setAdminUI = (isAuthenticated) => {
   adminPanelEl.classList.toggle("hidden", !isAuthenticated);
   adminGreetingEl.classList.toggle("hidden", !isAuthenticated);
   adminLogoutButton.classList.toggle("hidden", !isAuthenticated);
-  document.getElementById("contact")?.classList.toggle("hidden", isAuthenticated);
-  document.getElementById("about")?.classList.toggle("hidden", isAuthenticated);
-  document.getElementById("hero")?.classList.toggle("hidden", isAuthenticated);
 };
 
-const setPasswordUI = (show) => {
-  if (!adminSetPasswordEl) return;
-  adminSetPasswordEl.classList.toggle("hidden", !show);
-  if (show) {
-    adminAuthEl.classList.add("hidden");
-  }
-};
-
-const getAuthTypeFromHash = () => {
-  const hash = window.location.hash || "";
-  if (!hash.includes("access_token")) return null;
-  const params = new URLSearchParams(hash.replace(/^#/, ""));
-  return params.get("type");
-};
 
 const setAboutContent = (text) => {
   if (!aboutContentEl) return;
@@ -1527,38 +1506,6 @@ const setupListeners = () => {
 
   adminLogoutButton.addEventListener("click", handleLogout);
 
-  adminSetPasswordForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!ensureSupabase()) return;
-    const password = adminNewPassword.value.trim();
-    const confirm = adminConfirmPassword.value.trim();
-    if (!password || password.length < 6) {
-      adminSetPasswordStatus.textContent = "יש להזין סיסמה באורך 6 תווים לפחות.";
-      adminSetPasswordStatus.className = "text-sm mt-2 text-rose-600";
-      return;
-    }
-    if (password !== confirm) {
-      adminSetPasswordStatus.textContent = "הסיסמאות אינן תואמות.";
-      adminSetPasswordStatus.className = "text-sm mt-2 text-rose-600";
-      return;
-    }
-    adminSetPasswordStatus.textContent = "שומר...";
-    adminSetPasswordStatus.className = "text-sm mt-2 text-stone-500";
-    const { error } = await supabaseClient.auth.updateUser({ password });
-    if (error) {
-      adminSetPasswordStatus.textContent = "שמירת הסיסמה נכשלה.";
-      adminSetPasswordStatus.className = "text-sm mt-2 text-rose-600";
-      return;
-    }
-    adminSetPasswordStatus.textContent = "הסיסמה נשמרה בהצלחה.";
-    adminSetPasswordStatus.className = "text-sm mt-2 text-amber-900";
-    adminNewPassword.value = "";
-    adminConfirmPassword.value = "";
-    setPasswordUI(false);
-    await openAdminIfSession();
-    window.history.replaceState(null, "", "#admin");
-  });
-
   window.addEventListener("hashchange", updateRoute);
 };
 
@@ -1598,10 +1545,6 @@ const init = async () => {
   await fetchSiteMeta();
   renderProducts();
   updateCartUI();
-  const authType = getAuthTypeFromHash();
-  if (authType === "invite" || authType === "recovery") {
-    setPasswordUI(true);
-  }
   if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange((_event, session) => {
       state.session = session;

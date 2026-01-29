@@ -234,49 +234,19 @@
               </div>
               <div>
                 <label for="admin-password" class="form-label">סיסמה</label>
-                          <button
-                            type="submit"
-                            class="primary-button"
-                            id="whatsapp-submit"
-                          >
-                            שלח הזמנה
-                          </button>
+                <input
+                  id="admin-password"
+                  name="password"
+                  type="password"
+                  class="form-input"
+                  required
+                />
               </div>
               <button type="submit" class="primary-button">
                 התחברות
               </button>
             </form>
             <p id="admin-auth-error" class="text-sm text-rose-600 hidden"></p>
-          </div>
-
-          <div id="admin-set-password" class="admin-card hidden">
-            <h4 class="admin-title">הגדרת סיסמה</h4>
-            <form id="admin-set-password-form" class="grid gap-4">
-              <div>
-                <label for="admin-new-password" class="form-label">סיסמה חדשה</label>
-                <input
-                  id="admin-new-password"
-                  name="new-password"
-                  type="password"
-                  class="form-input"
-                  required
-                  minlength="6"
-                />
-              </div>
-              <div>
-                <label for="admin-confirm-password" class="form-label">אישור סיסמה</label>
-                <input
-                  id="admin-confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  class="form-input"
-                  required
-                  minlength="6"
-                />
-              </div>
-              <button type="submit" class="primary-button">שמירה</button>
-            </form>
-            <p id="admin-set-password-status" class="text-sm mt-2"></p>
           </div>
 
           <div id="admin-panel" class="admin-grid hidden">
