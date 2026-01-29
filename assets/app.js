@@ -550,6 +550,8 @@ const updateRoute = () => {
   document.getElementById("contact")?.classList.toggle("hidden", isAdmin);
   document.getElementById("about")?.classList.toggle("hidden", isAdmin);
   document.getElementById("hero")?.classList.toggle("hidden", isAdmin);
+  document.getElementById("header-description")?.classList.toggle("hidden", isAdmin);
+  adminLogoReplaceBtn.classList.toggle("hidden", !isAdmin);
   if (!isAdmin) {
     document.getElementById("catalog").classList.remove("hidden");
     document.getElementById("checkout").classList.remove("hidden");

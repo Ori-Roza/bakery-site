@@ -281,6 +281,9 @@ img {
   color: #7c2d12;
   min-height: 36px;
   -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 640px) {

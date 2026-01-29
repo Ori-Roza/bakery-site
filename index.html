@@ -34,6 +34,9 @@
               alt="לוגו ברכת יעקב"
               class="mx-auto h-28 sm:h-36 w-auto"
             />
+            <button id="admin-logo-replace-btn" class="hidden mt-3 primary-button">
+              החלף לוגו
+            </button>
             <input
               id="admin-logo-input"
               type="file"
@@ -41,7 +44,7 @@
               class="hidden"
             />
           </div>
-          <p class="text-xs sm:text-sm text-stone-700 max-w-xl mx-auto text-center leading-relaxed">
+          <p id="header-description" class="text-xs sm:text-sm text-stone-700 max-w-xl mx-auto text-center leading-relaxed">
             מאפים חמים מהתנור, חומרי גלם איכותיים וטעם של שבת. הזמינו אונליין והאיסוף
             מוכן בדיוק בזמן.
           </p>
@@ -215,7 +218,7 @@
 
         <section id="admin" class="space-y-4 hidden">
           <div class="flex items-center justify-between gap-3 flex-wrap">
-            <h3 class="secondary-button text-sm font-semibold">אזור ניהול</h3>
+            <p id="admin-greeting" class="text-sm text-stone-600 hidden"></p>
             <div class="flex items-center gap-3">
               <button id="admin-logout" class="secondary-button hidden">
                 התנתקות
@@ -223,7 +226,6 @@
               <a href="#catalog" class="secondary-button">חזרה לחנות</a>
             </div>
           </div>
-          <p id="admin-greeting" class="text-sm text-stone-600 hidden text-left"></p>
           <div id="admin-auth" class="admin-card">
             <h4 class="admin-title">כניסה לניהול</h4>
             <form id="admin-login-form" class="grid gap-4">
@@ -338,24 +340,6 @@
                 שמירה
               </button>
               <p id="admin-about-status" class="text-sm mt-2"></p>
-            </div>
-            
-            <div class="admin-card">
-              <h4 class="admin-title">עריכת לוגו</h4>
-              <div class="space-y-4">
-                <div class="flex items-center gap-4">
-                  <img
-                    id="admin-logo-preview"
-                    src="assets/b_yaakov_bakery_02.png"
-                    alt="לוגו נוכחי"
-                    class="h-24 w-auto border border-amber-200 rounded-lg"
-                  />
-                </div>
-                <button id="admin-logo-replace-btn" class="primary-button sm:w-auto">
-                  <i data-lucide="image" class="w-4 h-4 inline-block mr-2"></i>
-                  החלף לוגו
-                </button>
-              </div>
             </div>
           </div>
         </section>
