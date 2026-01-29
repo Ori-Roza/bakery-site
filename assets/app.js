@@ -551,7 +551,13 @@ const updateRoute = () => {
   document.getElementById("about")?.classList.toggle("hidden", isAdmin);
   document.getElementById("hero")?.classList.toggle("hidden", isAdmin);
   document.getElementById("header-description")?.classList.toggle("hidden", isAdmin);
-  adminLogoReplaceBtn.classList.toggle("hidden", !isAdmin);
+  // Update button visibility based on admin page and auth state
+  const isAuthenticated = state.session !== null;
+  if (isAdmin && isAuthenticated) {
+    adminLogoReplaceBtn.classList.remove("hidden");
+  } else {
+    adminLogoReplaceBtn.classList.add("hidden");
+  }
   if (!isAdmin) {
     document.getElementById("catalog").classList.remove("hidden");
     document.getElementById("checkout").classList.remove("hidden");
@@ -563,6 +569,13 @@ const setAdminUI = (isAuthenticated) => {
   adminPanelEl.classList.toggle("hidden", !isAuthenticated);
   adminGreetingEl.classList.toggle("hidden", !isAuthenticated);
   adminLogoutButton.classList.toggle("hidden", !isAuthenticated);
+  // Show button only if authenticated AND on admin page
+  const isAdmin = window.location.hash === "#admin";
+  if (isAuthenticated && isAdmin) {
+    adminLogoReplaceBtn.classList.remove("hidden");
+  } else {
+    adminLogoReplaceBtn.classList.add("hidden");
+  }
 };
 
 
