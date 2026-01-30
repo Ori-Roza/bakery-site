@@ -1125,18 +1125,31 @@ const fetchSiteMeta = async () => {
   if (adminHeroBadgeInput && data[0].hero_badge) {
     adminHeroBadgeInput.value = data[0].hero_badge;
     state.heroBadge = data[0].hero_badge;
+    const heroBadge = document.getElementById("hero-badge");
+    if (heroBadge) {
+      heroBadge.textContent = data[0].hero_badge;
+    }
   }
   if (adminHeroTitleInput && data[0].hero_title) {
     adminHeroTitleInput.value = data[0].hero_title;
     state.heroTitle = data[0].hero_title;
+    const heroTitle = document.querySelector("#hero h2");
+    if (heroTitle) {
+      heroTitle.textContent = data[0].hero_title;
+    }
   }
   if (adminHeroDescriptionInput && data[0].hero_description) {
     adminHeroDescriptionInput.value = data[0].hero_description;
     state.heroDescription = data[0].hero_description;
+    const heroDesc = document.getElementById("hero-description");
+    if (heroDesc) {
+      heroDesc.textContent = data[0].hero_description;
+    }
   }
   if (data[0].hero_chips) {
     state.heroChips = Array.isArray(data[0].hero_chips) ? data[0].hero_chips : [];
     renderHeroChipsAdmin();
+    renderHeroChipsDisplay();
   }
   if (data[0].hero_image_url) {
     state.heroImageUrl = data[0].hero_image_url;
@@ -1144,6 +1157,10 @@ const fetchSiteMeta = async () => {
       adminHeroImagePreview.innerHTML = `
         <img src="${data[0].hero_image_url}" alt="תצוגה מקדימה" class="max-h-32 rounded" />
       `;
+    }
+    const heroImage = document.getElementById("hero-image");
+    if (heroImage) {
+      heroImage.src = data[0].hero_image_url;
     }
   }
   
