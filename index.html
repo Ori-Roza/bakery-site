@@ -30,9 +30,9 @@
           <div class="text-center">
             <img
               id="site-logo"
-              src="assets/b_yaakov_bakery_02.png"
+              src="assets/wheat.png"
               alt="לוגו ברכת יעקב"
-              class="mx-auto h-28 sm:h-36 w-auto"
+              class="mx-auto h-36 sm:h-44 w-auto"
             />
             <button id="admin-logo-replace-btn" class="hidden mt-3 primary-button">
               החלף לוגו
@@ -44,7 +44,7 @@
               class="hidden"
             />
           </div>
-          <p id="header-description" class="text-xs sm:text-sm text-stone-700 max-w-xl mx-auto text-center leading-relaxed">
+          <p id="header-description" class="hidden text-xs sm:text-sm text-stone-700 max-w-xl mx-auto text-center leading-relaxed">
             מאפים חמים מהתנור, חומרי גלם איכותיים וטעם של שבת. הזמינו אונליין והאיסוף
             מוכן בדיוק בזמן.
           </p>
@@ -54,29 +54,19 @@
       <main class="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-10">
         <section id="hero" class="hero-card">
           <div class="flex flex-col gap-3 sm:gap-4">
-            <span class="badge text-xs sm:text-sm">חדש • הזמנות אונליין</span>
+            <span id="hero-badge" class="badge text-xs sm:text-sm">חדש • הזמנות אונליין</span>
             <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-900">
               בית המאפה שלכם לשבת, חג ובוקר מתוק
             </h2>
-            <p class="text-sm sm:text-base text-stone-700">
+            <p id="hero-description" class="text-sm sm:text-base text-stone-700">
               בחרו מאפים טריים, הוסיפו לסל ושלחו את ההזמנה לוואטסאפ של יעקב.
             </p>
-            <div class="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-stone-700">
-              <span class="info-chip flex items-center gap-2">
-                <i data-lucide="clock-3" class="w-4 h-4"></i>
-                איסוף מהיר באותו יום
-              </span>
-              <span class="info-chip flex items-center gap-2">
-                <i data-lucide="wheat" class="w-4 h-4"></i>
-                חלות בעבודת יד
-              </span>
-              <span class="info-chip flex items-center gap-2">
-                <i data-lucide="sparkles" class="w-4 h-4"></i>
-                מאפים חמים כל בוקר
-              </span>
+            <div id="hero-chips" class="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-stone-700">
+              <!-- Dynamic chips will be rendered here -->
             </div>
           </div>
           <img
+            id="hero-image"
             src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80"
             alt="לחם חם וקריספי"
             class="hero-image"
@@ -152,7 +142,7 @@
             </a>
             <div class="flex items-center gap-2 text-stone-700">
               <i data-lucide="map-pin" class="w-4 h-4"></i>
-              רחוב המאפיה 12, ירושלים
+              <span id="contact-address">רחוב המאפיה 12, ירושלים</span>
             </div>
           </div>
         </section>
@@ -327,19 +317,132 @@
               </div>
             </div>
             
-            <div class="admin-card">
-              <h4 class="admin-title">עריכת אודות</h4>
-              <label class="form-label" for="admin-about">תוכן אודות</label>
-              <textarea
-                id="admin-about"
+            <div class="admin-card hidden">
+              <h4 class="admin-title">עריכת כותרת העמוד</h4>
+              <label class="form-label" for="admin-header-title">כותרת בעמוד הבית</label>
+              <input
+                id="admin-header-title"
                 class="form-input"
-                rows="6"
-                placeholder="הכניסו טקסט אודות..."
-              ></textarea>
-              <button id="admin-about-save" class="primary-button mt-4">
+                type="text"
+                placeholder="הזמנת מאפים טריים..."
+              />
+              <button id="admin-header-title-save" class="primary-button mt-4">
                 שמירה
               </button>
-              <p id="admin-about-status" class="text-sm mt-2"></p>
+              <p id="admin-header-title-status" class="text-sm mt-2"></p>
+            </div>
+            
+            <div class="admin-card">
+              <h4 class="admin-title">עריכת טיזר</h4>
+              <div>
+                <label class="form-label" for="admin-hero-badge">תגית</label>
+                <input
+                  id="admin-hero-badge"
+                  class="form-input"
+                  type="text"
+                  placeholder="חדש • הזמנות אונליין"
+                />
+              </div>
+              <div class="mt-4">
+                <label class="form-label" for="admin-hero-title">כותרת ראשית</label>
+                <input
+                  id="admin-hero-title"
+                  class="form-input"
+                  type="text"
+                  placeholder="בית המאפה שלכם..."
+                />
+              </div>
+              <div class="mt-4">
+                <label class="form-label" for="admin-hero-description">תיאור</label>
+                <textarea
+                  id="admin-hero-description"
+                  class="form-input"
+                  rows="3"
+                  placeholder="בחרו מאפים טריים..."
+                ></textarea>
+              </div>
+              <div class="mt-4">
+                <label class="form-label">כרטיסים (תיאורים קצרים)</label>
+                <div id="admin-hero-chips-container" class="space-y-2">
+                  <!-- Dynamic chip inputs will be rendered here -->
+                </div>
+                <button id="admin-hero-add-chip" type="button" class="secondary-button mt-3 text-sm">
+                  + הוסף כרטיס
+                </button>
+              </div>
+              <div class="mt-4">
+                <label class="form-label" for="admin-hero-image-file">תמונה לטיזר</label>
+                <div class="file-input-wrapper">
+                  <input
+                    id="admin-hero-image-file"
+                    type="file"
+                    accept="image/*"
+                  />
+                  <span class="file-input-label">העלה תמונה</span>
+                </div>
+                <div id="admin-hero-image-preview" class="mt-2">
+                  <!-- Preview image will show here -->
+                </div>
+              </div>
+              <button id="admin-hero-save" class="primary-button mt-4">
+                שמירה
+              </button>
+              <p id="admin-hero-status" class="text-sm mt-2"></p>
+            </div>
+            
+            <div class="admin-card">
+              <h4 class="admin-title">מוצרים מומלצים בשבוע</h4>
+              <div class="text-sm text-stone-600 mb-3">סמנו את המוצרים שיופיעו בתיבת ההמלצות</div>
+              <div id="admin-featured-products" class="space-y-2 max-h-64 overflow-y-auto border border-amber-200 rounded-lg p-3"></div>
+              <button id="admin-featured-save" class="primary-button mt-4">
+                שמירה
+              </button>
+              <p id="admin-featured-status" class="text-sm mt-2"></p>
+            </div>
+            
+            <div class="admin-card">
+              <h4 class="admin-title">עריכת יצירת קשר</h4>
+              <div>
+                <label class="form-label" for="admin-contact-phone">טלפון</label>
+                <input
+                  id="admin-contact-phone"
+                  class="form-input"
+                  type="tel"
+                  placeholder="050-123-4567"
+                />
+              </div>
+              <div>
+                <label class="form-label" for="admin-contact-whatsapp">מספר וואטסאפ</label>
+                <input
+                  id="admin-contact-whatsapp"
+                  class="form-input"
+                  type="tel"
+                  placeholder="+972501234567"
+                />
+              </div>
+              <div>
+                <label class="form-label" for="admin-contact-email">אימייל</label>
+                <input
+                  id="admin-contact-email"
+                  class="form-input"
+                  type="email"
+                  dir="ltr"
+                  placeholder="info@bakery.com"
+                />
+              </div>
+              <div>
+                <label class="form-label" for="admin-contact-address">כתובת</label>
+                <input
+                  id="admin-contact-address"
+                  class="form-input"
+                  type="text"
+                  placeholder="רחוב המאפיה 12, ירושלים"
+                />
+              </div>
+              <button id="admin-contact-save" class="primary-button mt-4">
+                שמירה
+              </button>
+              <p id="admin-contact-status" class="text-sm mt-2"></p>
             </div>
           </div>
         </section>

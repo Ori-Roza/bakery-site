@@ -26,6 +26,12 @@ const state = {
   creatingCategoryId: null,
   siteMetaId: null,
   featuredProducts: [],
+  featuredProductIds: [],
+  heroChips: [],
+  heroImageUrl: "",
+  heroBadge: "",
+  heroTitle: "",
+  heroDescription: "",
 };
 
 const featuredTrackEl = document.getElementById("featured-track");
@@ -106,6 +112,29 @@ const siteLogoEl = document.getElementById("site-logo");
 const adminLogoPreview = document.getElementById("admin-logo-preview");
 const adminLogoReplaceBtn = document.getElementById("admin-logo-replace-btn");
 const adminLogoInput = document.getElementById("admin-logo-input");
+// New admin editable fields
+const adminHeaderTitleInput = document.getElementById("admin-header-title");
+const adminHeaderTitleSave = document.getElementById("admin-header-title-save");
+const adminHeaderTitleStatus = document.getElementById("admin-header-title-status");
+const adminHeroBadgeInput = document.getElementById("admin-hero-badge");
+const adminHeroTitleInput = document.getElementById("admin-hero-title");
+const adminHeroDescriptionInput = document.getElementById("admin-hero-description");
+const adminHeroChipsContainer = document.getElementById("admin-hero-chips-container");
+const adminHeroAddChipBtn = document.getElementById("admin-hero-add-chip");
+const adminHeroImageFile = document.getElementById("admin-hero-image-file");
+const adminHeroImagePreview = document.getElementById("admin-hero-image-preview");
+const adminHeroSave = document.getElementById("admin-hero-save");
+const adminHeroStatus = document.getElementById("admin-hero-status");
+const adminFeaturedProductsContainer = document.getElementById("admin-featured-products");
+const adminFeaturedSave = document.getElementById("admin-featured-save");
+const adminFeaturedStatus = document.getElementById("admin-featured-status");
+const adminContactPhoneInput = document.getElementById("admin-contact-phone");
+const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp");
+const adminContactEmailInput = document.getElementById("admin-contact-email");
+const adminContactAddressInput = document.getElementById("admin-contact-address");
+const adminContactSave = document.getElementById("admin-contact-save");
+const adminContactStatus = document.getElementById("admin-contact-status");
+const contactAddressEl = document.getElementById("contact-address");
 const notesPopover = document.createElement("div");
 notesPopover.id = "notes-popover";
 notesPopover.className = "notes-popover hidden";
@@ -550,7 +579,6 @@ const updateRoute = () => {
   document.getElementById("contact")?.classList.toggle("hidden", isAdmin);
   document.getElementById("about")?.classList.toggle("hidden", isAdmin);
   document.getElementById("hero")?.classList.toggle("hidden", isAdmin);
-  document.getElementById("header-description")?.classList.toggle("hidden", isAdmin);
   // Update button visibility based on admin page and auth state
   const isAuthenticated = state.session !== null;
   if (isAdmin && isAuthenticated) {
@@ -982,7 +1010,18 @@ const fetchProducts = async () => {
   }
 
   state.products = data.map(mapDbToProduct);
-  state.featuredProducts = pickRandomProducts(state.products, 5);
+  // Fetch featured products from database if available
+  await fetchFeaturedProducts();
+  if (!state.featuredProductIds || state.featuredProductIds.length === 0) {
+    // Fall back to random products if no featured products are set
+    state.featuredProducts = pickRandomProducts(state.products, 5);
+  } else {
+    // Use featured products from database (only in-stock)
+    state.featuredProducts = state.products.filter((p) =>
+      state.featuredProductIds.includes(p.id) && p.inStock
+    );
+  }
+
 };
 
 const fetchCategories = async () => {
@@ -1017,7 +1056,7 @@ const fetchSiteMeta = async () => {
   }
   const { data, error } = await supabaseClient
     .from("site_metadata")
-    .select("id,about_section,logo_url")
+    .select("*")
     .limit(1);
 
   if (error) {
@@ -1035,10 +1074,68 @@ const fetchSiteMeta = async () => {
   state.siteMetaId = data[0].id;
   setAboutContent(data[0].about_section || DEFAULT_ABOUT);
   
-  // Update logo if URL exists in database
+  // Update logo if URL exists in database, otherwise ensure default logo is visible
   if (data[0].logo_url) {
+    console.log("[fetchSiteMeta] Setting logo from DB:", data[0].logo_url);
     setLogo(data[0].logo_url);
+  } else {
+    console.log("[fetchSiteMeta] No logo_url in DB, keeping default");
   }
+  
+  // Set admin inputs with fetched values (only for existing columns)
+  if (adminContactPhoneInput) {
+    adminContactPhoneInput.value = data[0].contact_phone || "";
+  }
+  if (adminContactWhatsappInput) {
+    adminContactWhatsappInput.value = data[0].contact_whatsapp || "";
+  }
+  if (adminContactEmailInput) {
+    adminContactEmailInput.value = data[0].contact_email || "";
+  }
+  if (adminContactAddressInput) {
+    adminContactAddressInput.value = data[0].contact_address || "";
+  }
+  
+  // Load hero fields if they exist
+  if (adminHeroBadgeInput && data[0].hero_badge) {
+    adminHeroBadgeInput.value = data[0].hero_badge;
+    state.heroBadge = data[0].hero_badge;
+  }
+  if (adminHeroTitleInput && data[0].hero_title) {
+    adminHeroTitleInput.value = data[0].hero_title;
+    state.heroTitle = data[0].hero_title;
+  }
+  if (adminHeroDescriptionInput && data[0].hero_description) {
+    adminHeroDescriptionInput.value = data[0].hero_description;
+    state.heroDescription = data[0].hero_description;
+  }
+  if (data[0].hero_chips) {
+    state.heroChips = Array.isArray(data[0].hero_chips) ? data[0].hero_chips : [];
+    renderHeroChipsAdmin();
+  }
+  if (data[0].hero_image_url) {
+    state.heroImageUrl = data[0].hero_image_url;
+    if (adminHeroImagePreview) {
+      adminHeroImagePreview.innerHTML = `
+        <img src="${data[0].hero_image_url}" alt="תצוגה מקדימה" class="max-h-32 rounded" />
+      `;
+    }
+  }
+  
+  // Update contact display
+  if (data[0].contact_phone) {
+    updateContactPhone(data[0].contact_phone);
+  }
+  if (data[0].contact_whatsapp) {
+    updateContactWhatsapp(data[0].contact_whatsapp);
+  }
+  if (data[0].contact_email) {
+    updateContactEmail(data[0].contact_email);
+  }
+  if (data[0].contact_address) {
+    updateContactAddress(data[0].contact_address);
+  }
+
 };
 
 const saveAboutContent = async () => {
@@ -1121,6 +1218,67 @@ const uploadLogoImage = async (file) => {
   return data.publicUrl;
 };
 
+const uploadHeroImage = async (file) => {
+  if (!file) return null;
+  if (!ensureSupabase()) return null;
+  
+  const ext = file.name.split(".").pop();
+  const fileName = `hero-${Date.now()}.${ext}`;
+  const filePath = `hero-images/${fileName}`;
+
+  const { error } = await supabaseClient
+    .storage
+    .from("product-images")
+    .upload(filePath, file, { upsert: true });
+
+  if (error) {
+    console.error(error);
+    alert("העלאת התמונה נכשלה.");
+    return null;
+  }
+
+  const { data } = supabaseClient.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
+const saveHeroImage = async (file) => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  
+  if (!file) {
+    alert("יש לבחור קובץ תמונה.");
+    return;
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    alert("יש לבחור קובץ תמונה בלבד.");
+    return;
+  }
+
+  const heroImageUrl = await uploadHeroImage(file);
+  if (!heroImageUrl) {
+    return;
+  }
+
+  state.heroImageUrl = heroImageUrl;
+  
+  // Show preview
+  if (adminHeroImagePreview) {
+    adminHeroImagePreview.innerHTML = `
+      <img src="${heroImageUrl}" alt="תצוגה מקדימה" class="max-h-32 rounded" />
+    `;
+  }
+  
+  // Clear the file input
+  if (adminHeroImageFile) {
+    adminHeroImageFile.value = "";
+  }
+};
+
 const saveLogoImage = async (file) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
@@ -1166,6 +1324,400 @@ const saveLogoImage = async (file) => {
   
   // Clear the file input
   adminLogoInput.value = "";
+};
+
+const updateContactPhone = (phone) => {
+  if (contactPhoneEl) {
+    contactPhoneEl.href = `tel:${phone}`;
+    contactPhoneEl.textContent = phone;
+  }
+};
+
+const updateContactWhatsapp = (whatsapp) => {
+  if (contactWhatsappEl) {
+    const encodedMessage = encodeURIComponent("שלום, אני מעוניין להזמין");
+    contactWhatsappEl.href = `https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodedMessage}`;
+  }
+};
+
+const updateContactEmail = (email) => {
+  if (contactEmailEl) {
+    contactEmailEl.href = `mailto:${email}`;
+  }
+  if (contactEmailTextEl) {
+    contactEmailTextEl.textContent = email;
+  }
+};
+
+const updateContactAddress = (address) => {
+  if (contactAddressEl) {
+    contactAddressEl.textContent = address;
+  }
+};
+
+const saveHeaderTitle = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (adminHeaderTitleStatus) {
+    adminHeaderTitleStatus.textContent = "שומר...";
+    adminHeaderTitleStatus.className = "text-sm mt-2 text-stone-500";
+  }
+  
+  const title = adminHeaderTitleInput.value.trim();
+  if (!title) {
+    alert("יש להזין כותרת.");
+    if (adminHeaderTitleStatus) {
+      adminHeaderTitleStatus.textContent = "שגיאה: נא להזין כותרת.";
+      adminHeaderTitleStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  const payload = { header_title: title };
+  let error;
+  if (state.siteMetaId) {
+    ({ error } = await supabaseClient
+      .from("site_metadata")
+      .update(payload)
+      .eq("id", state.siteMetaId));
+  } else {
+    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  }
+
+  if (error) {
+    console.error(error);
+    if (adminHeaderTitleStatus) {
+      adminHeaderTitleStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminHeaderTitleStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  if (adminHeaderTitleStatus) {
+    adminHeaderTitleStatus.textContent = "נשמר בהצלחה ✓";
+    adminHeaderTitleStatus.className = "text-sm mt-2 text-green-600";
+  }
+  
+  // Update header description on page
+  const headerDesc = document.getElementById("header-description");
+  if (headerDesc) {
+    headerDesc.textContent = title;
+  }
+  
+  await fetchSiteMeta();
+};
+
+const saveHero = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (adminHeroStatus) {
+    adminHeroStatus.textContent = "שומר...";
+    adminHeroStatus.className = "text-sm mt-2 text-stone-500";
+  }
+  
+  const badge = adminHeroBadgeInput.value.trim();
+  const title = adminHeroTitleInput.value.trim();
+  const description = adminHeroDescriptionInput.value.trim();
+  const imageUrl = state.heroImageUrl;
+  
+  // Collect chip values from dynamic inputs
+  const chips = Array.from(document.querySelectorAll(".hero-chip-input"))
+    .map((input) => input.value.trim())
+    .filter((chip) => chip.length > 0);
+  
+  if (!title || !description) {
+    alert("יש למלא לפחות כותרת ותיאור.");
+    if (adminHeroStatus) {
+      adminHeroStatus.textContent = "שגיאה: נא למלא לפחות כותרת ותיאור.";
+      adminHeroStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  const payload = { 
+    hero_badge: badge,
+    hero_title: title,
+    hero_description: description,
+    hero_chips: chips,
+    hero_image_url: imageUrl
+  };
+  
+  let error;
+  if (state.siteMetaId) {
+    ({ error } = await supabaseClient
+      .from("site_metadata")
+      .update(payload)
+      .eq("id", state.siteMetaId));
+  } else {
+    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  }
+
+  if (error) {
+    console.error(error);
+    if (adminHeroStatus) {
+      adminHeroStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminHeroStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  // Update the hero elements on page immediately
+  const heroBadge = document.getElementById("hero-badge");
+  if (heroBadge && badge) {
+    heroBadge.textContent = badge;
+  }
+  
+  const heroTitle = document.querySelector("#hero h2");
+  if (heroTitle) {
+    heroTitle.textContent = title;
+  }
+  
+  const heroDesc = document.getElementById("hero-description");
+  if (heroDesc) {
+    heroDesc.textContent = description;
+  }
+  
+  renderHeroChipsDisplay();
+  
+  const heroImage = document.getElementById("hero-image");
+  if (heroImage && imageUrl) {
+    heroImage.src = imageUrl;
+  }
+  
+  if (adminHeroStatus) {
+    adminHeroStatus.textContent = "נשמר בהצלחה ✓";
+    adminHeroStatus.className = "text-sm mt-2 text-green-600";
+  }
+  await fetchSiteMeta();
+};
+
+const renderHeroChipsAdmin = () => {
+  if (!adminHeroChipsContainer) return;
+  adminHeroChipsContainer.innerHTML = "";
+  
+  state.heroChips.forEach((chip, index) => {
+    const chipDiv = document.createElement("div");
+    chipDiv.className = "flex gap-2 items-center";
+    chipDiv.innerHTML = `
+      <input 
+        type="text" 
+        class="form-input flex-1 hero-chip-input" 
+        data-index="${index}"
+        value="${chip}"
+        placeholder="הקלד תיאור"
+      />
+      <button type="button" class="remove-chip-btn text-red-600 hover:text-red-800" data-index="${index}">
+        ✕
+      </button>
+    `;
+    adminHeroChipsContainer.appendChild(chipDiv);
+    
+    const input = chipDiv.querySelector(".hero-chip-input");
+    if (input) {
+      input.addEventListener("input", (e) => {
+        state.heroChips[index] = e.target.value;
+      });
+    }
+    
+    const removeBtn = chipDiv.querySelector(".remove-chip-btn");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        state.heroChips.splice(index, 1);
+        renderHeroChipsAdmin();
+      });
+    }
+  });
+};
+
+const renderHeroChipsDisplay = () => {
+  const heroChipsEl = document.getElementById("hero-chips");
+  if (!heroChipsEl) return;
+  heroChipsEl.innerHTML = "";
+  
+  state.heroChips.forEach((chipText) => {
+    const span = document.createElement("span");
+    span.className = "info-chip flex items-center gap-2";
+    span.innerHTML = `
+      <i data-lucide="sparkles" class="w-4 h-4"></i>
+      ${chipText}
+    `;
+    heroChipsEl.appendChild(span);
+  });
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const renderFeaturedProductsCheckboxes = () => {
+  if (!adminFeaturedProductsContainer) return;
+  adminFeaturedProductsContainer.innerHTML = "";
+  
+  // Only show in-stock products
+  const inStockProducts = state.products.filter((p) => p.inStock);
+  
+  inStockProducts.forEach((product) => {
+    const isChecked = state.featuredProductIds && state.featuredProductIds.includes(product.id);
+    const label = document.createElement("label");
+    label.className = "flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer";
+    label.innerHTML = `
+      <input type="checkbox" value="${product.id}" class="featured-product-checkbox" ${isChecked ? 'checked' : ''} />
+      <span class="text-sm">${product.title}</span>
+    `;
+    adminFeaturedProductsContainer.appendChild(label);
+  });
+};
+
+const saveFeaturedProducts = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (adminFeaturedStatus) {
+    adminFeaturedStatus.textContent = "שומר...";
+    adminFeaturedStatus.className = "text-sm mt-2 text-stone-500";
+  }
+  
+  const checkboxes = document.querySelectorAll(".featured-product-checkbox");
+  const selectedIds = Array.from(checkboxes)
+    .filter((cb) => cb.checked)
+    .map((cb) => Number(cb.value));
+  
+  if (selectedIds.length === 0) {
+    alert("בחרו לפחות מוצר אחד.");
+    if (adminFeaturedStatus) {
+      adminFeaturedStatus.textContent = "שגיאה: בחרו לפחות מוצר אחד.";
+      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  // Delete all existing featured products
+  const { error: deleteError } = await supabaseClient
+    .from("featured_products")
+    .delete()
+    .eq("site_metadata_id", state.siteMetaId);
+
+  if (deleteError) {
+    console.error(deleteError);
+    if (adminFeaturedStatus) {
+      adminFeaturedStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  // Insert new featured products
+  const payload = selectedIds.map((productId) => ({
+    product_id: productId,
+    site_metadata_id: state.siteMetaId,
+  }));
+
+  const { error } = await supabaseClient
+    .from("featured_products")
+    .insert(payload);
+
+  if (error) {
+    console.error(error);
+    if (adminFeaturedStatus) {
+      adminFeaturedStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  state.featuredProductIds = selectedIds;
+  // Update featured products array and re-render (filter out-of-stock)
+  state.featuredProducts = state.products.filter((p) =>
+    selectedIds.includes(p.id) && p.inStock
+  );
+  renderProducts();
+  
+  if (adminFeaturedStatus) {
+    adminFeaturedStatus.textContent = "נשמר בהצלחה ✓";
+    adminFeaturedStatus.className = "text-sm mt-2 text-green-600";
+  }
+};
+
+const saveContactInfo = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (adminContactStatus) {
+    adminContactStatus.textContent = "שומר...";
+    adminContactStatus.className = "text-sm mt-2 text-stone-500";
+  }
+
+  const phone = adminContactPhoneInput.value.trim();
+  const whatsapp = adminContactWhatsappInput.value.trim();
+  const email = adminContactEmailInput.value.trim();
+  const address = adminContactAddressInput.value.trim();
+
+  if (!phone || !whatsapp || !email || !address) {
+    alert("יש למלא את כל השדות.");
+    if (adminContactStatus) {
+      adminContactStatus.textContent = "שגיאה: יש למלא את כל השדות.";
+      adminContactStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  const payload = {
+    contact_phone: phone,
+    contact_whatsapp: whatsapp,
+    contact_email: email,
+    contact_address: address,
+  };
+  
+  let error;
+  if (state.siteMetaId) {
+    ({ error } = await supabaseClient
+      .from("site_metadata")
+      .update(payload)
+      .eq("id", state.siteMetaId));
+  } else {
+    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  }
+
+  if (error) {
+    console.error(error);
+    if (adminContactStatus) {
+      adminContactStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
+      adminContactStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  updateContactPhone(phone);
+  updateContactWhatsapp(whatsapp);
+  updateContactEmail(email);
+  updateContactAddress(address);
+
+  if (adminContactStatus) {
+    adminContactStatus.textContent = "נשמר בהצלחה ✓";
+    adminContactStatus.className = "text-sm mt-2 text-green-600";
+  }
+  await fetchSiteMeta();
+};
+
+const fetchFeaturedProducts = async () => {
+  if (!ensureSupabase()) return;
+  if (!state.siteMetaId) {
+    console.warn("[fetchFeaturedProducts] No siteMetaId set");
+    state.featuredProductIds = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("featured_products")
+    .select("product_id")
+    .eq("site_metadata_id", state.siteMetaId);
+
+  if (error) {
+    console.error(error);
+    state.featuredProductIds = [];
+    return;
+  }
+
+  state.featuredProductIds = (data || []).map((item) => item.product_id);
+  renderFeaturedProductsCheckboxes();
 };
 
 const fetchOrders = async () => {
@@ -1219,6 +1771,7 @@ const openAdminIfSession = async () => {
     adminGreetingEl.textContent = `Hello ${state.session.user.email}`;
     await fetchOrders();
     renderAdmin();
+    renderFeaturedProductsCheckboxes();
   }
 };
 
@@ -1551,7 +2104,42 @@ const setupListeners = () => {
   if (productSearchInput) {
     productSearchInput.addEventListener("input", renderProducts);
   }
-  adminAboutSave.addEventListener("click", saveAboutContent);
+  if (adminAboutSave) {
+    adminAboutSave.addEventListener("click", saveAboutContent);
+  }
+  if (adminHeaderTitleSave) {
+    adminHeaderTitleSave.addEventListener("click", saveHeaderTitle);
+  }
+  if (adminHeroSave) {
+    adminHeroSave.addEventListener("click", saveHero);
+  }
+  if (adminHeroBadgeInput) {
+    adminHeroBadgeInput.addEventListener("input", (e) => {
+      state.heroBadge = e.target.value;
+    });
+  }
+  if (adminHeroTitleInput) {
+    adminHeroTitleInput.addEventListener("input", (e) => {
+      state.heroTitle = e.target.value;
+    });
+  }
+  if (adminHeroDescriptionInput) {
+    adminHeroDescriptionInput.addEventListener("input", (e) => {
+      state.heroDescription = e.target.value;
+    });
+  }
+  if (adminHeroAddChipBtn) {
+    adminHeroAddChipBtn.addEventListener("click", () => {
+      state.heroChips.push("");
+      renderHeroChipsAdmin();
+    });
+  }
+  if (adminFeaturedSave) {
+    adminFeaturedSave.addEventListener("click", saveFeaturedProducts);
+  }
+  if (adminContactSave) {
+    adminContactSave.addEventListener("click", saveContactInfo);
+  }
   
   // Logo replacement button and file input handlers
   if (adminLogoReplaceBtn) {
@@ -1565,6 +2153,15 @@ const setupListeners = () => {
       const file = event.target.files[0];
       if (file) {
         await saveLogoImage(file);
+      }
+    });
+  }
+  
+  if (adminHeroImageFile) {
+    adminHeroImageFile.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        await saveHeroImage(file);
       }
     });
   }
@@ -1683,10 +2280,11 @@ const init = async () => {
   await fetchCategories();
   console.log("[init] After fetchCategories, state.categories:", state.categories);
   
+  await fetchSiteMeta();
+  console.log("[init] After fetchSiteMeta, state.siteMetaId:", state.siteMetaId);
+  
   await fetchProducts();
   console.log("[init] After fetchProducts, state.products.length:", state.products.length);
-  
-  await fetchSiteMeta();
   renderProducts();
   updateCartUI();
   if (supabaseClient) {
