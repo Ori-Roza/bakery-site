@@ -273,6 +273,7 @@
                       <th data-sort="title">שם מוצר</th>
                       <th data-sort="category">קטגוריה</th>
                       <th data-sort="price">מחיר</th>
+                      <th data-sort="discountPercentage">הנחה %</th>
                       <th data-sort="inStock">זמין</th>
                     </tr>
                   </thead>
@@ -500,6 +501,10 @@
           <div>
             <label class="form-label" for="modal-price">מחיר</label>
             <input id="modal-price" type="number" min="0" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label" for="modal-discount">הנחה (באחוזים)</label>
+            <input id="modal-discount" type="number" min="0" max="100" class="form-input" placeholder="0" />
           </div>
           <div>
             <label class="form-label">קטגוריה</label>

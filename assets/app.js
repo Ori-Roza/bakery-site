@@ -156,6 +156,7 @@ const mapDbToProduct = (row) => ({
   id: row.id,
   title: row.title,
   price: Number(row.price),
+  discountPercentage: Number(row.discount_percentage) || 0,
   categoryId: row.category_id || row.categoryId || row.category_id,
   categoryName: row.categories?.name || row.category || "",
   image: row.image,
@@ -166,6 +167,7 @@ const mapProductToDb = (product, { includeId = false } = {}) => {
   const payload = {
     title: product.title,
     price: product.price,
+    discount_percentage: product.discountPercentage || 0,
     category_id: normalizeCategoryId(
       product.categoryId || product.category_id || null
     ),
@@ -381,14 +383,24 @@ const renderProducts = () => {
     featured.forEach((product) => {
       const card = document.createElement("article");
       card.className = "carousel-card";
+      const discountedPrice = product.discountPercentage > 0
+        ? product.price * (1 - product.discountPercentage / 100)
+        : product.price;
+      const discountBadge = product.discountPercentage > 0
+        ? `<div class="discount-badge">-${Math.round(product.discountPercentage)}%</div>`
+        : "";
       card.innerHTML = `
-        <img src="${product.image}" alt="${product.title}" />
+        <div class="relative">
+          <img src="${product.image}" alt="${product.title}" />
+          ${discountBadge}
+        </div>
         <div class="carousel-content">
           <div class="flex items-start justify-between gap-2">
             <h5 class="font-semibold text-lg">${product.title}</h5>
-            <span class="text-amber-900 font-bold">${formatCurrency(
-              product.price
-            )}</span>
+            <div class="text-right">
+              ${product.discountPercentage > 0 ? `<span class="text-xs text-stone-500 line-through">${formatCurrency(product.price)}</span><br/>` : ""}
+              <span class="text-amber-900 font-bold">${formatCurrency(discountedPrice)}</span>
+            </div>
           </div>
           <button
             class="primary-button"
@@ -416,14 +428,24 @@ const renderProducts = () => {
     items.forEach((product) => {
       const card = document.createElement("article");
       card.className = "product-card";
+      const discountedPrice = product.discountPercentage > 0
+        ? product.price * (1 - product.discountPercentage / 100)
+        : product.price;
+      const discountBadge = product.discountPercentage > 0
+        ? `<div class="discount-badge">-${Math.round(product.discountPercentage)}%</div>`
+        : "";
       card.innerHTML = `
-        <img src="${product.image}" alt="${product.title}" class="product-image" />
+        <div class="relative">
+          <img src="${product.image}" alt="${product.title}" class="product-image" />
+          ${discountBadge}
+        </div>
         <div class="product-content">
           <div class="flex items-start justify-between gap-2">
             <h5 class="font-semibold text-lg">${product.title}</h5>
-            <span class="text-amber-900 font-bold">${formatCurrency(
-              product.price
-            )}</span>
+            <div class="text-right">
+              ${product.discountPercentage > 0 ? `<span class="text-xs text-stone-500 line-through">${formatCurrency(product.price)}</span><br/>` : ""}
+              <span class="text-amber-900 font-bold">${formatCurrency(discountedPrice)}</span>
+            </div>
           </div>
           <button
             class="primary-button"
@@ -455,7 +477,7 @@ const renderAdmin = () => {
   filteredProducts.sort((a, b) => {
     let left = a[productKey];
     let right = b[productKey];
-    if (productKey === "price") {
+    if (productKey === "price" || productKey === "discountPercentage") {
       left = Number(left);
       right = Number(right);
     }
@@ -477,6 +499,7 @@ const renderAdmin = () => {
       <td>${product.title}</td>
       <td>${getCategoryLabel(product)}</td>
       <td>${formatCurrency(product.price)}</td>
+      <td>${product.discountPercentage > 0 ? `${Math.round(product.discountPercentage)}%` : "-"}</td>
       <td>${product.inStock ? "כן" : "לא"}</td>
     `;
     adminProductsEl.appendChild(row);
@@ -836,6 +859,8 @@ const handleAdminChange = async () => {
   product.categoryName = category?.category_name || product.categoryName || "";
   product.image = imageUrl;
   product.inStock = modalStock.checked;
+  const modalDiscount = document.getElementById("modal-discount");
+  product.discountPercentage = modalDiscount ? Number(modalDiscount.value) || 0 : 0;
 
   const { error } = await supabaseClient
     .from("products")
@@ -990,7 +1015,7 @@ const fetchProducts = async () => {
 
   const { data, error } = await supabaseClient
     .from("products")
-    .select("id,title,price,image,in_stock,category_id")
+    .select("id,title,price,discount_percentage,image,in_stock,category_id")
     .order("id", { ascending: true });
 
   console.log("[fetchProducts] data:", data);
@@ -1814,6 +1839,10 @@ const openModal = (product) => {
   state.editingProductId = product.id;
   modalTitle.value = product.title;
   modalPrice.value = product.price;
+  const modalDiscount = document.getElementById("modal-discount");
+  if (modalDiscount) {
+    modalDiscount.value = product.discountPercentage || 0;
+  }
   const initialCategoryId = normalizeCategoryId(product.categoryId);
   console.log("[openModal] After normalizeProductId, initialCategoryId:", initialCategoryId);
   if (initialCategoryId) {
