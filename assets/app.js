@@ -1220,8 +1220,8 @@ const saveAboutContent = async () => {
 
   await fetchSiteMeta();
   if (adminAboutStatus) {
-    adminAboutStatus.textContent = "נשמר בהצלחה";
-    adminAboutStatus.className = "text-sm mt-2 text-amber-900";
+    adminAboutStatus.textContent = "נשמר בהצלחה ✓";
+    adminAboutStatus.className = "text-sm mt-2 text-green-600";
   }
 };
 
