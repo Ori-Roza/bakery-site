@@ -657,12 +657,14 @@ img {
   overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 @media (max-width: 640px) {
   .admin-table-wrapper {
     border-radius: 0.75rem;
     max-height: none;
+    max-height: 70vh;
   }
 }
 

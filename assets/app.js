@@ -1992,6 +1992,14 @@ const closeNotesPopover = (shouldSave = false) => {
 };
 
 const setupListeners = () => {
+  // Logo click to go back to home
+  if (siteLogoEl) {
+    siteLogoEl.addEventListener("click", () => {
+      window.location.hash = "#";
+      document.getElementById("catalog").scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
   const updateSortIndicators = (tableEl, sortState) => {
     if (!tableEl) return;
     tableEl
