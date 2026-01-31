@@ -1449,11 +1449,8 @@ const updateContactAddress = (address) => {
     const isAndroid = /Android/.test(navigator.userAgent);
     let mapsUrl;
     
-    if (isIOS) {
-      // iOS: Use Apple Maps which shows app chooser for navigation apps
-      mapsUrl = `https://maps.apple.com/?address=${encodeURIComponent(address)}`;
-    } else if (isAndroid) {
-      // Android: Use Waze URL which prompts to choose between Waze and Google Maps
+    if (isIOS || isAndroid) {
+      // Mobile (both iOS and Android): Use Waze URL as first option
       mapsUrl = `https://waze.com/ul?q=${encodeURIComponent(address)}`;
     } else {
       // Desktop: Use Google Maps which opens in browser
