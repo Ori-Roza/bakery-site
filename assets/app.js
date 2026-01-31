@@ -1139,7 +1139,9 @@ const fetchSiteMeta = async () => {
     adminContactBakeryPhoneInput.value = data[0].bakery_telephone || "";
   }
   if (adminContactWhatsappInput) {
-    adminContactWhatsappInput.value = data[0].contact_whatsapp || "";
+    // Strip the + prefix for display in admin input
+    const whatsappValue = data[0].contact_whatsapp || "";
+    adminContactWhatsappInput.value = whatsappValue.startsWith('+') ? whatsappValue.substring(1) : whatsappValue;
   }
   if (adminContactEmailInput) {
     adminContactEmailInput.value = data[0].contact_email || "";
@@ -1746,6 +1748,9 @@ const saveFeaturedProducts = async () => {
 const saveContactInfo = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
+  
+  console.log("[saveContactInfo] Starting save operation");
+  
   if (adminContactStatus) {
     adminContactStatus.textContent = "שומר...";
     adminContactStatus.className = "text-sm mt-2 text-stone-500";
@@ -1755,6 +1760,8 @@ const saveContactInfo = async () => {
   let whatsapp = adminContactWhatsappInput.value.trim();
   const email = adminContactEmailInput.value.trim();
   const address = adminContactAddressInput.value.trim();
+
+  console.log("[saveContactInfo] Form values:", { bakeryPhone, whatsapp, email, address });
 
   if (!bakeryPhone || !whatsapp || !email || !address) {
     alert("יש למלא את כל השדות.");
@@ -1767,6 +1774,7 @@ const saveContactInfo = async () => {
 
   // Normalize WhatsApp number: remove all non-digits and add + prefix
   whatsapp = '+' + whatsapp.replace(/\D/g, '');
+  console.log("[saveContactInfo] Normalized whatsapp:", whatsapp);
 
   const payload = {
     bakery_telephone: bakeryPhone,
@@ -1775,18 +1783,27 @@ const saveContactInfo = async () => {
     contact_address: address,
   };
   
+  console.log("[saveContactInfo] Payload:", payload);
+  
   let error;
-  if (state.siteMetaId) {
-    ({ error } = await supabaseClient
-      .from("site_metadata")
-      .update(payload)
-      .eq("id", state.siteMetaId));
-  } else {
-    ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+  try {
+    if (state.siteMetaId) {
+      console.log("[saveContactInfo] Updating existing record with ID:", state.siteMetaId);
+      ({ error } = await supabaseClient
+        .from("site_metadata")
+        .update(payload)
+        .eq("id", state.siteMetaId));
+    } else {
+      console.log("[saveContactInfo] Inserting new record");
+      ({ error } = await supabaseClient.from("site_metadata").insert([payload]));
+    }
+  } catch (err) {
+    console.error("[saveContactInfo] Exception during database operation:", err);
+    error = err;
   }
 
   if (error) {
-    console.error(error);
+    console.error("[saveContactInfo] Database error:", error);
     if (adminContactStatus) {
       adminContactStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
       adminContactStatus.className = "text-sm mt-2 text-rose-600";
@@ -1794,7 +1811,9 @@ const saveContactInfo = async () => {
     return;
   }
 
-  updateContactPhone(phone);
+  console.log("[saveContactInfo] Save successful, updating UI");
+  
+  updateContactPhone(bakeryPhone);
   updateContactBakeryPhone(bakeryPhone);
   updateContactWhatsapp(whatsapp);
   updateContactEmail(email);
@@ -1804,6 +1823,8 @@ const saveContactInfo = async () => {
     adminContactStatus.textContent = "נשמר בהצלחה ✓";
     adminContactStatus.className = "text-sm mt-2 text-green-600";
   }
+  
+  console.log("[saveContactInfo] UI updated, fetching latest data");
   await fetchSiteMeta();
 };
 
