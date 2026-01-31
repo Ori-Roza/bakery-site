@@ -1413,16 +1413,20 @@ const updateContactBakeryPhone = (phone) => {
 };
 
 const updateContactWhatsapp = (whatsapp) => {
-  // Normalize phone number: remove trailing + and add leading +
-  const cleanPhone = whatsapp.replace(/\+/g, '').trim();
-  const formattedPhone = `+${cleanPhone}`;
+  // Remove all non-digit characters
+  const cleanPhone = whatsapp.replace(/\D/g, '');
+  
+  // If starts with 0, remove it and add +972; otherwise just add +972
+  const numberOnly = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone;
+  const waPhone = `972${numberOnly}`;
+  const displayPhone = cleanPhone.startsWith('0') ? cleanPhone : `0${cleanPhone}`;
   
   if (contactWhatsappPhoneEl) {
-    contactWhatsappPhoneEl.textContent = formattedPhone;
+    contactWhatsappPhoneEl.textContent = displayPhone;
   }
   if (contactWhatsappEl) {
     const encodedMessage = encodeURIComponent("שלום, אני מעוניין להזמין");
-    contactWhatsappEl.href = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    contactWhatsappEl.href = `https://wa.me/+${waPhone}?text=${encodedMessage}`;
   }
 };
 
@@ -1440,8 +1444,22 @@ const updateContactAddress = (address) => {
     contactAddressEl.textContent = address;
   }
   if (contactAddressLinkEl) {
-    // Google Maps search URL
-    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+    // Detect device/OS and use appropriate maps URL
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    let mapsUrl;
+    
+    if (isIOS) {
+      // iOS: Use Apple Maps which shows app chooser for navigation apps
+      mapsUrl = `https://maps.apple.com/?address=${encodeURIComponent(address)}`;
+    } else if (isAndroid) {
+      // Android: Use Waze URL which prompts to choose between Waze and Google Maps
+      mapsUrl = `https://waze.com/ul?q=${encodeURIComponent(address)}`;
+    } else {
+      // Desktop: Use Google Maps which opens in browser
+      mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+    }
+    
     contactAddressLinkEl.href = mapsUrl;
   }
 };
