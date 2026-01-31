@@ -118,9 +118,13 @@
         <section id="contact" class="space-y-4">
           <h3 class="section-title">יצירת קשר</h3>
           <div class="checkout-card grid gap-3">
-            <a id="contact-phone" href="tel:+972501234567" class="flex items-center gap-2 text-stone-700">
+            <a
+              id="contact-bakery-phone-link"
+              href="#"
+              class="flex items-center gap-2 text-stone-700"
+            >
               <i data-lucide="phone" class="w-4 h-4"></i>
-              050-123-4567
+              <span id="contact-bakery-phone">050-123-4567</span>
             </a>
             <a
               id="contact-whatsapp"
@@ -130,7 +134,7 @@
               class="flex items-center gap-2 text-stone-700"
             >
               <img src="assets/whatsapp.svg" alt="WhatsApp" class="w-4 h-4" />
-              וואטסאפ להזמנות
+              <span id="contact-whatsapp-phone" dir="ltr">050-123-4567</span>
             </a>
             <a
               id="contact-email"
@@ -140,10 +144,16 @@
               <i data-lucide="mail" class="w-4 h-4"></i>
               <span id="contact-email-text"></span>
             </a>
-            <div class="flex items-center gap-2 text-stone-700">
+            <a
+              id="contact-address-link"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-2 text-stone-700"
+            >
               <i data-lucide="map-pin" class="w-4 h-4"></i>
               <span id="contact-address">רחוב המאפיה 12, ירושלים</span>
-            </div>
+            </a>
           </div>
         </section>
 
@@ -404,16 +414,16 @@
             <div class="admin-card">
               <h4 class="admin-title">עריכת יצירת קשר</h4>
               <div>
-                <label class="form-label" for="admin-contact-phone">טלפון</label>
+                <label class="form-label" for="admin-contact-bakery-phone">טלפון הטלפון (שיוצג בעמוד)</label>
                 <input
-                  id="admin-contact-phone"
+                  id="admin-contact-bakery-phone"
                   class="form-input"
                   type="tel"
                   placeholder="050-123-4567"
                 />
               </div>
               <div>
-                <label class="form-label" for="admin-contact-whatsapp">מספר וואטסאפ</label>
+                <label class="form-label" for="admin-contact-whatsapp">מספר וואטסאפ להזמנות</label>
                 <input
                   id="admin-contact-whatsapp"
                   class="form-input"

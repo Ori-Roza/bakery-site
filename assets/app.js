@@ -104,10 +104,14 @@ const categoryModal = document.getElementById("category-modal");
 const categoryModalClose = document.getElementById("category-modal-close");
 const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
-const contactPhoneEl = document.getElementById("contact-phone");
+const contactBakeryPhoneEl = document.getElementById("contact-bakery-phone");
+const contactBakeryPhoneLinkEl = document.getElementById("contact-bakery-phone-link");
 const contactWhatsappEl = document.getElementById("contact-whatsapp");
+const contactWhatsappPhoneEl = document.getElementById("contact-whatsapp-phone");
 const contactEmailEl = document.getElementById("contact-email");
 const contactEmailTextEl = document.getElementById("contact-email-text");
+const contactAddressEl = document.getElementById("contact-address");
+const contactAddressLinkEl = document.getElementById("contact-address-link");
 const siteLogoEl = document.getElementById("site-logo");
 const adminLogoPreview = document.getElementById("admin-logo-preview");
 const adminLogoReplaceBtn = document.getElementById("admin-logo-replace-btn");
@@ -128,13 +132,12 @@ const adminHeroStatus = document.getElementById("admin-hero-status");
 const adminFeaturedProductsContainer = document.getElementById("admin-featured-products");
 const adminFeaturedSave = document.getElementById("admin-featured-save");
 const adminFeaturedStatus = document.getElementById("admin-featured-status");
-const adminContactPhoneInput = document.getElementById("admin-contact-phone");
+const adminContactBakeryPhoneInput = document.getElementById("admin-contact-bakery-phone");
 const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp");
 const adminContactEmailInput = document.getElementById("admin-contact-email");
 const adminContactAddressInput = document.getElementById("admin-contact-address");
 const adminContactSave = document.getElementById("admin-contact-save");
 const adminContactStatus = document.getElementById("admin-contact-status");
-const contactAddressEl = document.getElementById("contact-address");
 const notesPopover = document.createElement("div");
 notesPopover.id = "notes-popover";
 notesPopover.className = "notes-popover hidden";
@@ -1108,8 +1111,8 @@ const fetchSiteMeta = async () => {
   }
   
   // Set admin inputs with fetched values (only for existing columns)
-  if (adminContactPhoneInput) {
-    adminContactPhoneInput.value = data[0].contact_phone || "";
+  if (adminContactBakeryPhoneInput) {
+    adminContactBakeryPhoneInput.value = data[0].bakery_telephone || "";
   }
   if (adminContactWhatsappInput) {
     adminContactWhatsappInput.value = data[0].contact_whatsapp || "";
@@ -1167,6 +1170,9 @@ const fetchSiteMeta = async () => {
   // Update contact display
   if (data[0].contact_phone) {
     updateContactPhone(data[0].contact_phone);
+  }
+  if (data[0].bakery_telephone) {
+    updateContactBakeryPhone(data[0].bakery_telephone);
   }
   if (data[0].contact_whatsapp) {
     updateContactWhatsapp(data[0].contact_whatsapp);
@@ -1369,16 +1375,30 @@ const saveLogoImage = async (file) => {
 };
 
 const updateContactPhone = (phone) => {
-  if (contactPhoneEl) {
-    contactPhoneEl.href = `tel:${phone}`;
-    contactPhoneEl.textContent = phone;
+  // contactPhone display is now handled by updateContactBakeryPhone
+  // This function kept for backward compatibility
+};
+
+const updateContactBakeryPhone = (phone) => {
+  if (contactBakeryPhoneEl) {
+    contactBakeryPhoneEl.textContent = phone;
+  }
+  if (contactBakeryPhoneLinkEl) {
+    contactBakeryPhoneLinkEl.href = `tel:${phone}`;
   }
 };
 
 const updateContactWhatsapp = (whatsapp) => {
+  // Normalize phone number: remove trailing + and add leading +
+  const cleanPhone = whatsapp.replace(/\+/g, '').trim();
+  const formattedPhone = `+${cleanPhone}`;
+  
+  if (contactWhatsappPhoneEl) {
+    contactWhatsappPhoneEl.textContent = formattedPhone;
+  }
   if (contactWhatsappEl) {
     const encodedMessage = encodeURIComponent("שלום, אני מעוניין להזמין");
-    contactWhatsappEl.href = `https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodedMessage}`;
+    contactWhatsappEl.href = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
   }
 };
 
@@ -1394,6 +1414,11 @@ const updateContactEmail = (email) => {
 const updateContactAddress = (address) => {
   if (contactAddressEl) {
     contactAddressEl.textContent = address;
+  }
+  if (contactAddressLinkEl) {
+    // Google Maps search URL
+    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+    contactAddressLinkEl.href = mapsUrl;
   }
 };
 
@@ -1687,12 +1712,12 @@ const saveContactInfo = async () => {
     adminContactStatus.className = "text-sm mt-2 text-stone-500";
   }
 
-  const phone = adminContactPhoneInput.value.trim();
-  const whatsapp = adminContactWhatsappInput.value.trim();
+  const bakeryPhone = adminContactBakeryPhoneInput.value.trim();
+  let whatsapp = adminContactWhatsappInput.value.trim();
   const email = adminContactEmailInput.value.trim();
   const address = adminContactAddressInput.value.trim();
 
-  if (!phone || !whatsapp || !email || !address) {
+  if (!bakeryPhone || !whatsapp || !email || !address) {
     alert("יש למלא את כל השדות.");
     if (adminContactStatus) {
       adminContactStatus.textContent = "שגיאה: יש למלא את כל השדות.";
@@ -1701,8 +1726,11 @@ const saveContactInfo = async () => {
     return;
   }
 
+  // Normalize WhatsApp number: remove all non-digits and add + prefix
+  whatsapp = '+' + whatsapp.replace(/\D/g, '');
+
   const payload = {
-    contact_phone: phone,
+    bakery_telephone: bakeryPhone,
     contact_whatsapp: whatsapp,
     contact_email: email,
     contact_address: address,
@@ -1728,6 +1756,7 @@ const saveContactInfo = async () => {
   }
 
   updateContactPhone(phone);
+  updateContactBakeryPhone(bakeryPhone);
   updateContactWhatsapp(whatsapp);
   updateContactEmail(email);
   updateContactAddress(address);
@@ -2302,19 +2331,7 @@ const init = async () => {
   setupListeners();
   updateRoute();
 
-  if (contactPhoneEl) {
-    contactPhoneEl.href = `tel:+${CONTACT_PHONE_INTL}`;
-    contactPhoneEl.lastChild.textContent = CONTACT_PHONE;
-  }
-  if (contactWhatsappEl) {
-    contactWhatsappEl.href = `https://wa.me/${CONTACT_PHONE_INTL}`;
-  }
-  if (contactEmailEl) {
-    contactEmailEl.href = `mailto:${CONTACT_EMAIL}`;
-    if (contactEmailTextEl) {
-      contactEmailTextEl.textContent = CONTACT_EMAIL;
-    }
-  }
+  // Contact info is now loaded from database in fetchSiteMeta()
 
   if (!supabaseClient) {
     console.log("[init] No Supabase client, exiting early");
