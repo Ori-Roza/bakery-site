@@ -101,62 +101,6 @@
           </div>
         </section>
 
-        <section id="about" class="space-y-4">
-          <h3 class="section-title">אודות</h3>
-          <div class="checkout-card">
-            <div class="grid gap-4 md:grid-cols-[1.1fr_0.9fr] items-center">
-              <div id="about-content" class="text-stone-700 leading-relaxed"></div>
-              <img
-                src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80"
-                alt="מאפים טריים בתנור"
-                class="rounded-2xl shadow-lg h-48 w-full object-cover"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section id="contact" class="space-y-4">
-          <h3 class="section-title">יצירת קשר</h3>
-          <div class="checkout-card grid gap-3">
-            <a
-              id="contact-bakery-phone-link"
-              href="#"
-              class="flex items-center gap-2 text-stone-700"
-            >
-              <i data-lucide="phone" class="w-4 h-4"></i>
-              <span id="contact-bakery-phone">050-123-4567</span>
-            </a>
-            <a
-              id="contact-whatsapp"
-              href="#"
-              target="_blank"
-              rel="noopener"
-              class="flex items-center gap-2 text-stone-700"
-            >
-              <img src="assets/whatsapp.svg" alt="WhatsApp" class="w-4 h-4" />
-              <span id="contact-whatsapp-phone" dir="ltr">050-123-4567</span>
-            </a>
-            <a
-              id="contact-email"
-              href="#"
-              class="flex items-center gap-2 text-stone-700"
-            >
-              <i data-lucide="mail" class="w-4 h-4"></i>
-              <span id="contact-email-text"></span>
-            </a>
-            <a
-              id="contact-address-link"
-              href="#"
-              target="_blank"
-              rel="noopener"
-              class="flex items-center gap-2 text-stone-700"
-            >
-              <i data-lucide="map-pin" class="w-4 h-4"></i>
-              <span id="contact-address">רחוב המאפיה 12, ירושלים</span>
-            </a>
-          </div>
-        </section>
-
         <section id="checkout" class="space-y-4">
           <h3 class="section-title">סיום הזמנה</h3>
           <div class="checkout-card">
@@ -205,6 +149,16 @@
                   />
                 </div>
               </div>
+              <div>
+                <label for="user-notes" class="form-label">הערות להזמנה (אופציונלי)</label>
+                <textarea
+                  id="user-notes"
+                  name="user_notes"
+                  class="form-input"
+                  rows="3"
+                  placeholder="הערות מיוחדות, העדפות, או בקשות..."
+                ></textarea>
+              </div>
               <button
                 type="submit"
                 class="primary-button"
@@ -212,7 +166,64 @@
               >
                 שלח הזמנה
               </button>
+              <p id="checkout-error" class="text-sm text-rose-600 hidden mt-2"></p>
             </form>
+          </div>
+        </section>
+
+        <section id="contact" class="space-y-4">
+          <h3 class="section-title">צור קשר</h3>
+          <div class="checkout-card grid gap-3">
+            <a
+              id="contact-bakery-phone-link"
+              href="#"
+              class="flex items-center gap-2 text-stone-700"
+            >
+              <i data-lucide="phone" class="w-4 h-4"></i>
+              <span id="contact-bakery-phone">050-123-4567</span>
+            </a>
+            <a
+              id="contact-whatsapp"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-2 text-stone-700"
+            >
+              <img src="assets/whatsapp.svg" alt="WhatsApp" class="w-4 h-4" />
+              <span id="contact-whatsapp-phone" dir="ltr">050-123-4567</span>
+            </a>
+            <a
+              id="contact-email"
+              href="#"
+              class="flex items-center gap-2 text-stone-700"
+            >
+              <i data-lucide="mail" class="w-4 h-4"></i>
+              <span id="contact-email-text"></span>
+            </a>
+            <a
+              id="contact-address-link"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center gap-2 text-stone-700"
+            >
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span id="contact-address">רחוב המאפיה 12, ירושלים</span>
+            </a>
+          </div>
+        </section>
+
+        <section id="about" class="space-y-4">
+          <h3 class="section-title">אודות</h3>
+          <div class="checkout-card">
+            <div class="grid gap-4 md:grid-cols-[1.1fr_0.9fr] items-center">
+              <div id="about-content" class="text-stone-700 leading-relaxed"></div>
+              <img
+                src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80"
+                alt="מאפים טריים בתנור"
+                class="rounded-2xl shadow-lg h-48 w-full object-cover"
+              />
+            </div>
           </div>
         </section>
 
@@ -319,7 +330,8 @@
                       <th data-sort="created_at">תאריך</th>
                       <th data-sort="total">סכום</th>
                       <th data-sort="paid">שולם</th>
-                      <th data-sort="notes">הערות</th>
+                      <th data-sort="notes">הערות מנהל</th>
+                      <th data-sort="user_notes">הערות לקוח</th>
                       <th data-sort="deleted">מחוק</th>
                     </tr>
                   </thead>
@@ -412,9 +424,9 @@
             </div>
             
             <div class="admin-card">
-              <h4 class="admin-title">עריכת יצירת קשר</h4>
+              <h4 class="admin-title">עריכת צור קשר</h4>
               <div>
-                <label class="form-label" for="admin-contact-bakery-phone">טלפון הטלפון (שיוצג בעמוד)</label>
+                <label class="form-label" for="admin-contact-bakery-phone">טלפון החנות</label>
                 <input
                   id="admin-contact-bakery-phone"
                   class="form-input"

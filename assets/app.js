@@ -63,6 +63,7 @@ const aboutContentEl = document.getElementById("about-content");
 const adminAboutInput = document.getElementById("admin-about");
 const adminAboutSave = document.getElementById("admin-about-save");
 const adminAboutStatus = document.getElementById("admin-about-status");
+const checkoutError = document.getElementById("checkout-error");
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
@@ -527,6 +528,9 @@ const renderAdmin = () => {
     } else if (orderKey === "notes") {
       left = a.notes || "";
       right = b.notes || "";
+    } else if (orderKey === "user_notes") {
+      left = a.user_notes || "";
+      right = b.user_notes || "";
     } else if (orderKey === "created_at") {
       left = new Date(a.created_at).getTime();
       right = new Date(b.created_at).getTime();
@@ -553,7 +557,7 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='7' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
+      "<td colspan='8' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
@@ -583,9 +587,14 @@ const renderAdmin = () => {
           data-order-field="notes"
           data-order-id="${order.id}"
           value="${order.notes || ""}"
-          placeholder="הערות"
+          placeholder="הערות מנהל"
           readonly
         />
+      </td>
+      <td>
+        <div class="text-sm text-stone-600" title="${order.user_notes || ""}">${
+          order.user_notes ? (order.user_notes.length > 30 ? order.user_notes.substring(0, 30) + "..." : order.user_notes) : "-"
+        }</div>
       </td>
       <td>
         <input type="checkbox" class="form-checkbox" data-order-field="deleted" data-order-id="${
@@ -720,6 +729,13 @@ const buildOrderMessage = ({ name, phone, date, time, items, totalPrice }) => {
 const handleCheckout = async (event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
+  
+  // Clear any previous error
+  if (checkoutError) {
+    checkoutError.textContent = "";
+    checkoutError.classList.add("hidden");
+  }
+  
   const form = event.target;
   const formData = new FormData(form);
   const payload = {
@@ -727,11 +743,15 @@ const handleCheckout = async (event) => {
     phone: formData.get("phone").trim(),
     date: formData.get("date"),
     time: formData.get("time"),
+    user_notes: formData.get("user_notes")?.trim() || "",
   };
 
   const { items, totalPrice } = getCartTotals();
   if (!items.length) {
-    alert("העגלה ריקה. הוסיפו מוצרים לפני שליחת ההזמנה.");
+    if (checkoutError) {
+      checkoutError.textContent = "העגלה ריקה. הוסיפו מוצרים לפני שליחת ההזמנה.";
+      checkoutError.classList.remove("hidden");
+    }
     return;
   }
 
@@ -754,11 +774,15 @@ const handleCheckout = async (event) => {
       customer: payload,
       paid: false,
       notes: "",
+      user_notes: payload.user_notes,
     },
   ]);
 
   if (error) {
-    alert("לא ניתן לשמור הזמנה כרגע. נסו שוב.");
+    if (checkoutError) {
+      checkoutError.textContent = "לא ניתן לשמור הזמנה כרגע. נסו שוב.";
+      checkoutError.classList.remove("hidden");
+    }
     return;
   }
 
@@ -1874,7 +1898,8 @@ const showOrderDetails = (order) => {
     )}</div>
     <div><strong>סכום:</strong> ${formatCurrency(order.total)}</div>
     <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
-    <div><strong>הערות:</strong> ${order.notes || "-"}</div>
+    <div><strong>הערות מנהל:</strong> ${order.notes || "-"}</div>
+    <div><strong>הערות לקוח:</strong> ${order.user_notes || "-"}</div>
     <div><strong>פריטים:</strong><br />${items || "-"}</div>
   `;
   orderDetailsModal.classList.remove("hidden");
