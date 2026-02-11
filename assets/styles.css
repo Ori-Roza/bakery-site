@@ -198,6 +198,19 @@ img {
   scroll-snap-align: end;
 }
 
+.category-card {
+  border: 2px solid transparent;
+  text-align: right;
+  cursor: pointer;
+  padding: 0;
+  background: #fff;
+}
+
+.category-card.active {
+  border-color: #d97706;
+  box-shadow: 0 16px 30px -22px rgba(217, 119, 6, 0.55);
+}
+
 @media (max-width: 640px) {
   .carousel-card,
   .scroll-card {

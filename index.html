@@ -32,7 +32,7 @@
               id="site-logo"
               src="assets/wheat.png"
               alt="לוגו ברכת יעקב"
-              class="mx-auto h-36 sm:h-44 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              class="mx-auto h-32 sm:h-40 w-auto cursor-pointer hover:opacity-80 transition-opacity"
             />
             <button id="admin-logo-replace-btn" class="hidden mt-3 primary-button">
               החלף לוגו
@@ -76,10 +76,10 @@
         <section id="catalog" class="space-y-8 sm:space-y-10">
           <div class="space-y-3 sm:space-y-4">
             <div class="flex items-center justify-between">
-              <h3 class="section-title">מומלצי השבוע</h3>
+              <h3 class="section-title">קטגוריות</h3>
             </div>
-            <div class="carousel" id="featured-carousel">
-              <div class="carousel-track" id="featured-track"></div>
+            <div class="carousel" id="category-carousel">
+              <div class="carousel-track" id="category-track"></div>
             </div>
           </div>
           <div class="space-y-3 sm:space-y-4">
@@ -181,6 +181,14 @@
             >
               <i data-lucide="phone" class="w-4 h-4 flex-shrink-0"></i>
               <span id="contact-bakery-phone">050-123-4567</span>
+            </a>
+            <a
+              id="contact-store-phone-link"
+              href="#"
+              class="flex items-center gap-2 text-stone-700 break-all"
+            >
+              <i data-lucide="phone" class="w-4 h-4 flex-shrink-0"></i>
+              <span id="contact-store-phone">050-123-4567</span>
             </a>
             <a
               id="contact-whatsapp"
@@ -414,21 +422,20 @@
             </div>
             
             <div class="admin-card">
-              <h4 class="admin-title">מוצרים מומלצים בשבוע</h4>
-              <div class="text-sm text-stone-600 mb-3">סמנו את המוצרים שיופיעו בתיבת ההמלצות</div>
-              <div id="admin-featured-products" class="space-y-2 max-h-64 overflow-y-auto border border-amber-200 rounded-lg p-3"></div>
-              <button id="admin-featured-save" class="primary-button mt-4">
-                שמירה
-              </button>
-              <p id="admin-featured-status" class="text-sm mt-2"></p>
-            </div>
-            
-            <div class="admin-card">
               <h4 class="admin-title">עריכת צור קשר</h4>
               <div>
                 <label class="form-label" for="admin-contact-bakery-phone">טלפון החנות</label>
                 <input
                   id="admin-contact-bakery-phone"
+                  class="form-input"
+                  type="tel"
+                  placeholder="050-123-4567"
+                />
+              </div>
+              <div>
+                <label class="form-label" for="admin-contact-store-phone">טלפון חנות נוסף</label>
+                <input
+                  id="admin-contact-store-phone"
                   class="form-input"
                   type="tel"
                   placeholder="050-123-4567"
@@ -510,7 +517,7 @@
           <span id="cart-total">₪0</span>
         </div>
         <button id="checkout-scroll" class="primary-button">
-          המשך לפרטים נוספים
+          סיום הזמנה
         </button>
       </div>
     </aside>
@@ -700,6 +707,23 @@
         </div>
         <div class="flex flex-wrap gap-3 mt-6">
           <button id="category-save" class="primary-button">שמירה</button>
+        </div>
+        <p id="category-status" class="text-sm mt-2"></p>
+      </div>
+    </div>
+
+    <div id="order-channel-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="flex items-center justify-between">
+          <h4 class="admin-title">איך לשלוח את ההזמנה?</h4>
+          <button id="order-channel-close" class="secondary-button">סגור</button>
+        </div>
+        <p class="text-sm text-stone-600 mt-4">
+          אפשר לבחור אם לשלוח בוואטסאפ או באימייל.
+        </p>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button id="order-channel-whatsapp" class="primary-button">שליחה בוואטסאפ</button>
+          <button id="order-channel-email" class="secondary-button">שליחה באימייל</button>
         </div>
       </div>
     </div>

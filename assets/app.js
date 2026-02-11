@@ -3,8 +3,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const CONTACT_PHONE = "050-123-4567";
 const CONTACT_PHONE_INTL = "972501234567";
 const CONTACT_EMAIL = "ori.roza@bluevine.com";
-const WHATSAPP_PHONE = CONTACT_PHONE_INTL;
-const ORDER_EMAIL = CONTACT_EMAIL;
+const DEFAULT_WHATSAPP_PHONE = CONTACT_PHONE_INTL;
+const DEFAULT_ORDER_EMAIL = CONTACT_EMAIL;
 
 const SUPABASE_CONFIG = window.__SUPABASE__ || {};
 const supabaseClient =
@@ -32,9 +32,15 @@ const state = {
   heroBadge: "",
   heroTitle: "",
   heroDescription: "",
+  activeCategoryId: null,
+  checkoutWhatsappPhone: DEFAULT_WHATSAPP_PHONE,
+  checkoutEmail: DEFAULT_ORDER_EMAIL,
+  storePhone: CONTACT_PHONE,
+  bakeryPhone: CONTACT_PHONE,
+  pendingOrderLinks: null,
 };
 
-const featuredTrackEl = document.getElementById("featured-track");
+const categoryTrackEl = document.getElementById("category-track");
 const productsScrollEl = document.getElementById("products-scroll");
 const productSearchInput = document.getElementById("product-search");
 const cartDrawer = document.getElementById("cart-drawer");
@@ -105,8 +111,11 @@ const categoryModal = document.getElementById("category-modal");
 const categoryModalClose = document.getElementById("category-modal-close");
 const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
+const categoryStatus = document.getElementById("category-status");
 const contactBakeryPhoneEl = document.getElementById("contact-bakery-phone");
 const contactBakeryPhoneLinkEl = document.getElementById("contact-bakery-phone-link");
+const contactStorePhoneEl = document.getElementById("contact-store-phone");
+const contactStorePhoneLinkEl = document.getElementById("contact-store-phone-link");
 const contactWhatsappEl = document.getElementById("contact-whatsapp");
 const contactWhatsappPhoneEl = document.getElementById("contact-whatsapp-phone");
 const contactEmailEl = document.getElementById("contact-email");
@@ -134,11 +143,18 @@ const adminFeaturedProductsContainer = document.getElementById("admin-featured-p
 const adminFeaturedSave = document.getElementById("admin-featured-save");
 const adminFeaturedStatus = document.getElementById("admin-featured-status");
 const adminContactBakeryPhoneInput = document.getElementById("admin-contact-bakery-phone");
+const adminContactStorePhoneInput = document.getElementById("admin-contact-store-phone");
 const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp");
 const adminContactEmailInput = document.getElementById("admin-contact-email");
 const adminContactAddressInput = document.getElementById("admin-contact-address");
 const adminContactSave = document.getElementById("admin-contact-save");
 const adminContactStatus = document.getElementById("admin-contact-status");
+const pickupDateInput = document.getElementById("pickup-date");
+const pickupTimeInput = document.getElementById("pickup-time");
+const orderChannelModal = document.getElementById("order-channel-modal");
+const orderChannelClose = document.getElementById("order-channel-close");
+const orderChannelWhatsapp = document.getElementById("order-channel-whatsapp");
+const orderChannelEmail = document.getElementById("order-channel-email");
 const notesPopover = document.createElement("div");
 notesPopover.id = "notes-popover";
 notesPopover.className = "notes-popover hidden";
@@ -216,6 +232,104 @@ const normalizeCategoryId = (value) => {
 const normalizeProductId = (value) => {
   const asNumber = Number(value);
   return Number.isFinite(asNumber) ? asNumber : null;
+};
+
+const formatDateForInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatTimeForInput = (date) => {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+const getPickupDateTime = (dateValue, timeValue) => {
+  if (!dateValue || !timeValue) return null;
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  if (!year || !month || !day || Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+};
+
+const updatePickupConstraints = () => {
+  if (!pickupDateInput || !pickupTimeInput) return;
+  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const minDate = formatDateForInput(minDateTime);
+  pickupDateInput.min = minDate;
+
+  if (pickupDateInput.value === minDate) {
+    pickupTimeInput.min = formatTimeForInput(minDateTime);
+  } else {
+    pickupTimeInput.removeAttribute("min");
+  }
+};
+
+const setActiveCategory = (categoryId) => {
+  state.activeCategoryId = categoryId;
+  renderCategoryCarousel();
+  renderProducts();
+};
+
+const getCategoryThumbnail = (categoryId) => {
+  if (!categoryId) {
+    return state.products[0]?.image || "assets/wheat.png";
+  }
+  const match = state.products.find(
+    (product) => String(product.categoryId) === String(categoryId)
+  );
+  return match?.image || "assets/wheat.png";
+};
+
+const renderCategoryCarousel = () => {
+  if (!categoryTrackEl) return;
+
+  categoryTrackEl.innerHTML = "";
+
+  const allCard = document.createElement("button");
+  allCard.type = "button";
+  allCard.className = "carousel-card category-card";
+  if (!state.activeCategoryId) {
+    allCard.classList.add("active");
+  }
+  allCard.dataset.categoryId = "";
+  allCard.innerHTML = `
+    <div class="relative">
+      <img src="${getCategoryThumbnail(null)}" alt="כל הקטגוריות" />
+    </div>
+    <div class="carousel-content">
+      <h5 class="font-semibold text-lg">כל הקטגוריות</h5>
+      <p class="text-sm text-stone-500">הצגת כל המוצרים</p>
+    </div>
+  `;
+  allCard.addEventListener("click", () => setActiveCategory(null));
+  categoryTrackEl.appendChild(allCard);
+
+  state.categories.forEach((category) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "carousel-card category-card";
+    if (String(state.activeCategoryId) === String(category.category_id)) {
+      card.classList.add("active");
+    }
+    card.dataset.categoryId = category.category_id;
+    card.innerHTML = `
+      <div class="relative">
+        <img src="${getCategoryThumbnail(category.category_id)}" alt="${category.category_name}" />
+      </div>
+      <div class="carousel-content">
+        <h5 class="font-semibold text-lg">${category.category_name}</h5>
+        <p class="text-sm text-stone-500">מוצרים בקטגוריה זו</p>
+      </div>
+    `;
+    card.addEventListener("click", () => setActiveCategory(category.category_id));
+    categoryTrackEl.appendChild(card);
+  });
 };
 
 const ensureCategoryOptions = () => {
@@ -379,53 +493,17 @@ const updateCartUI = () => {
 };
 
 const renderProducts = () => {
-  if (featuredTrackEl) {
-    featuredTrackEl.innerHTML = "";
-    const featured = state.featuredProducts.length
-      ? state.featuredProducts
-      : pickRandomProducts(state.products, 5);
-    featured.forEach((product) => {
-      const card = document.createElement("article");
-      card.className = "carousel-card";
-      const discountedPrice = product.discountPercentage > 0
-        ? product.price * (1 - product.discountPercentage / 100)
-        : product.price;
-      const discountBadge = product.discountPercentage > 0
-        ? `<div class="discount-badge">-${Math.round(product.discountPercentage)}%</div>`
-        : "";
-      card.innerHTML = `
-        <div class="relative">
-          <img src="${product.image}" alt="${product.title}" />
-          ${discountBadge}
-        </div>
-        <div class="carousel-content">
-          <div class="flex items-start justify-between gap-2">
-            <h5 class="font-semibold text-lg">${product.title}</h5>
-            <div class="text-right">
-              ${product.discountPercentage > 0 ? `<span class="text-xs text-stone-500 line-through">${formatCurrency(product.price)}</span><br/>` : ""}
-              <span class="text-amber-900 font-bold">${formatCurrency(discountedPrice)}</span>
-            </div>
-          </div>
-          <button
-            class="primary-button"
-            data-action="add"
-            data-id="${product.id}"
-            ${product.inStock ? "" : "disabled"}
-          >
-            ${product.inStock ? "הוסף לסל" : "אזל מהמלאי"}
-          </button>
-        </div>
-      `;
-      featuredTrackEl.appendChild(card);
-    });
-  }
-
   if (productsScrollEl) {
     const query = productSearchInput?.value?.trim().toLowerCase() || "";
+    const activeCategory = state.activeCategoryId;
     const items = [...state.products]
       .filter((product) =>
         product.title.toLowerCase().includes(query)
       )
+      .filter((product) => {
+        if (!activeCategory) return true;
+        return String(product.categoryId) === String(activeCategory);
+      })
       .sort((a, b) => a.title.localeCompare(b.title, "he"));
 
     productsScrollEl.innerHTML = "";
@@ -726,6 +804,29 @@ const buildOrderMessage = ({ name, phone, date, time, items, totalPrice }) => {
   );
 };
 
+const buildOrderLinks = (message) => {
+  const whatsappPhone = state.checkoutWhatsappPhone || DEFAULT_WHATSAPP_PHONE;
+  const email = state.checkoutEmail || DEFAULT_ORDER_EMAIL;
+  return {
+    whatsappUrl: `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`,
+    emailUrl: `mailto:${email}?subject=${encodeURIComponent(
+      "הזמנה חדשה מהאתר"
+    )}&body=${encodeURIComponent(message)}`,
+  };
+};
+
+const openOrderChannelModal = (links) => {
+  if (!orderChannelModal) return;
+  state.pendingOrderLinks = links;
+  orderChannelModal.classList.remove("hidden");
+};
+
+const closeOrderChannelModal = () => {
+  if (!orderChannelModal) return;
+  orderChannelModal.classList.add("hidden");
+  state.pendingOrderLinks = null;
+};
+
 const handleCheckout = async (event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
@@ -746,6 +847,16 @@ const handleCheckout = async (event) => {
     user_notes: formData.get("user_notes")?.trim() || "",
   };
 
+  const pickupDateTime = getPickupDateTime(payload.date, payload.time);
+  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  if (!pickupDateTime || pickupDateTime < minDateTime) {
+    if (checkoutError) {
+      checkoutError.textContent = "יש לבחור מועד איסוף לפחות 24 שעות מראש.";
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+
   const { items, totalPrice } = getCartTotals();
   if (!items.length) {
     if (checkoutError) {
@@ -760,12 +871,7 @@ const handleCheckout = async (event) => {
     items,
     totalPrice,
   });
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const url = isMobile
-    ? `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`
-    : `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent(
-        "הזמנה חדשה מהאתר"
-      )}&body=${encodeURIComponent(message)}`;
+  const links = buildOrderLinks(message);
 
   const { error } = await supabaseClient.from("orders").insert([
     {
@@ -791,7 +897,7 @@ const handleCheckout = async (event) => {
   updateCartUI();
   await fetchOrders();
 
-  window.location.href = url;
+  openOrderChannelModal(links);
 };
 
 const handleCreateOrder = async () => {
@@ -1050,29 +1156,18 @@ const fetchProducts = async () => {
   if (error) {
     console.error("[fetchProducts] error:", error);
     state.products = [];
-    state.featuredProducts = [];
     return;
   }
 
   if (!data || data.length === 0) {
     state.products = [];
-    state.featuredProducts = [];
     ensureCategoryOptions();
+    renderCategoryCarousel();
     return;
   }
 
   state.products = data.map(mapDbToProduct);
-  // Fetch featured products from database if available
-  await fetchFeaturedProducts();
-  if (!state.featuredProductIds || state.featuredProductIds.length === 0) {
-    // Fall back to random products if no featured products are set
-    state.featuredProducts = pickRandomProducts(state.products, 5);
-  } else {
-    // Use featured products from database (only in-stock)
-    state.featuredProducts = state.products.filter((p) =>
-      state.featuredProductIds.includes(p.id) && p.inStock
-    );
-  }
+  renderCategoryCarousel();
 
 };
 
@@ -1099,6 +1194,7 @@ const fetchCategories = async () => {
   }));
   console.log("[fetchCategories] Mapped categories:", state.categories);
   ensureCategoryOptions();
+  renderCategoryCarousel();
 };
 
 const fetchSiteMeta = async () => {
@@ -1114,12 +1210,20 @@ const fetchSiteMeta = async () => {
   if (error) {
     console.error(error);
     setAboutContent(DEFAULT_ABOUT);
+    updateContactBakeryPhone(CONTACT_PHONE);
+    updateContactStorePhone(CONTACT_PHONE);
+    updateContactWhatsapp(CONTACT_PHONE);
+    updateContactEmail(CONTACT_EMAIL);
     return;
   }
 
   if (!data || !data.length) {
     setAboutContent(DEFAULT_ABOUT);
     state.siteMetaId = null;
+    updateContactBakeryPhone(CONTACT_PHONE);
+    updateContactStorePhone(CONTACT_PHONE);
+    updateContactWhatsapp(CONTACT_PHONE);
+    updateContactEmail(CONTACT_EMAIL);
     return;
   }
 
@@ -1137,6 +1241,9 @@ const fetchSiteMeta = async () => {
   // Set admin inputs with fetched values (only for existing columns)
   if (adminContactBakeryPhoneInput) {
     adminContactBakeryPhoneInput.value = data[0].bakery_telephone || "";
+  }
+  if (adminContactStorePhoneInput) {
+    adminContactStorePhoneInput.value = data[0].store_phone || "";
   }
   if (adminContactWhatsappInput) {
     // Strip the + prefix for display in admin input
@@ -1199,6 +1306,11 @@ const fetchSiteMeta = async () => {
   }
   if (data[0].bakery_telephone) {
     updateContactBakeryPhone(data[0].bakery_telephone);
+  }
+  if (data[0].store_phone) {
+    updateContactStorePhone(data[0].store_phone);
+  } else {
+    updateContactStorePhone(CONTACT_PHONE);
   }
   if (data[0].contact_whatsapp) {
     updateContactWhatsapp(data[0].contact_whatsapp);
@@ -1406,33 +1518,56 @@ const updateContactPhone = (phone) => {
 };
 
 const updateContactBakeryPhone = (phone) => {
+  const safePhone = phone || CONTACT_PHONE;
+  state.bakeryPhone = safePhone;
   if (contactBakeryPhoneEl) {
-    contactBakeryPhoneEl.textContent = phone;
+    contactBakeryPhoneEl.textContent = safePhone;
   }
   if (contactBakeryPhoneLinkEl) {
-    contactBakeryPhoneLinkEl.href = `tel:${phone}`;
+    contactBakeryPhoneLinkEl.href = `tel:${safePhone}`;
+  }
+};
+
+const updateContactStorePhone = (phone) => {
+  const safePhone = phone || CONTACT_PHONE;
+  state.storePhone = safePhone;
+  if (contactStorePhoneEl) {
+    contactStorePhoneEl.textContent = safePhone;
+  }
+  if (contactStorePhoneLinkEl) {
+    contactStorePhoneLinkEl.href = `tel:${safePhone}`;
   }
 };
 
 const updateContactWhatsapp = (whatsapp) => {
+  if (!whatsapp) {
+    state.checkoutWhatsappPhone = DEFAULT_WHATSAPP_PHONE;
+    return;
+  }
   // Remove all non-digit characters
   const cleanPhone = whatsapp.replace(/\D/g, '');
   
-  // If starts with 0, remove it and add +972; otherwise just add +972
-  const numberOnly = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone;
+  let numberOnly = cleanPhone;
+  if (cleanPhone.startsWith('972')) {
+    numberOnly = cleanPhone.substring(3);
+  } else if (cleanPhone.startsWith('0')) {
+    numberOnly = cleanPhone.substring(1);
+  }
   const waPhone = `972${numberOnly}`;
-  const displayPhone = cleanPhone.startsWith('0') ? cleanPhone : `0${cleanPhone}`;
+  const displayPhone = `0${numberOnly}`;
+  state.checkoutWhatsappPhone = waPhone || DEFAULT_WHATSAPP_PHONE;
   
   if (contactWhatsappPhoneEl) {
     contactWhatsappPhoneEl.textContent = displayPhone;
   }
   if (contactWhatsappEl) {
     const encodedMessage = encodeURIComponent("שלום, אני מעוניין להזמין");
-    contactWhatsappEl.href = `https://wa.me/+${waPhone}?text=${encodedMessage}`;
+    contactWhatsappEl.href = `https://wa.me/${waPhone}?text=${encodedMessage}`;
   }
 };
 
 const updateContactEmail = (email) => {
+  state.checkoutEmail = email || DEFAULT_ORDER_EMAIL;
   if (contactEmailEl) {
     contactEmailEl.href = `mailto:${email}`;
   }
@@ -1757,13 +1892,16 @@ const saveContactInfo = async () => {
   }
 
   const bakeryPhone = adminContactBakeryPhoneInput.value.trim();
+  const storePhone = adminContactStorePhoneInput
+    ? adminContactStorePhoneInput.value.trim()
+    : bakeryPhone;
   let whatsapp = adminContactWhatsappInput.value.trim();
   const email = adminContactEmailInput.value.trim();
   const address = adminContactAddressInput.value.trim();
 
-  console.log("[saveContactInfo] Form values:", { bakeryPhone, whatsapp, email, address });
+  console.log("[saveContactInfo] Form values:", { bakeryPhone, storePhone, whatsapp, email, address });
 
-  if (!bakeryPhone || !whatsapp || !email || !address) {
+  if (!bakeryPhone || !storePhone || !whatsapp || !email || !address) {
     alert("יש למלא את כל השדות.");
     if (adminContactStatus) {
       adminContactStatus.textContent = "שגיאה: יש למלא את כל השדות.";
@@ -1778,6 +1916,7 @@ const saveContactInfo = async () => {
 
   const payload = {
     bakery_telephone: bakeryPhone,
+    store_phone: storePhone,
     contact_whatsapp: whatsapp,
     contact_email: email,
     contact_address: address,
@@ -1815,6 +1954,7 @@ const saveContactInfo = async () => {
   
   updateContactPhone(bakeryPhone);
   updateContactBakeryPhone(bakeryPhone);
+  updateContactStorePhone(storePhone);
   updateContactWhatsapp(whatsapp);
   updateContactEmail(email);
   updateContactAddress(address);
@@ -2001,6 +2141,10 @@ const openCreateProductModal = () => {
 
 const openCategoryModal = () => {
   categoryModal.classList.remove("hidden");
+  if (categoryStatus) {
+    categoryStatus.textContent = "";
+    categoryStatus.className = "text-sm mt-2";
+  }
 };
 
 const closeCategoryModal = () => {
@@ -2012,18 +2156,44 @@ const handleCreateCategory = async () => {
   if (!ensureAdmin()) return;
   const name = categoryNameInput.value.trim();
   if (!name) {
-    alert("יש להזין שם קטגוריה.");
+    if (categoryStatus) {
+      categoryStatus.textContent = "יש להזין שם קטגוריה.";
+      categoryStatus.className = "text-sm mt-2 text-rose-600";
+    }
     return;
+  }
+  const duplicate = state.categories.some(
+    (category) => category.category_name === name
+  );
+  if (duplicate) {
+    if (categoryStatus) {
+      categoryStatus.textContent = "הקטגוריה כבר קיימת.";
+      categoryStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+  if (categoryStatus) {
+    categoryStatus.textContent = "שומר...";
+    categoryStatus.className = "text-sm mt-2 text-stone-500";
   }
   const { error } = await supabaseClient.from("categories").insert([
     { name },
   ]);
   if (error) {
     console.error(error);
-    alert("לא ניתן ליצור קטגוריה.");
+    if (categoryStatus) {
+      categoryStatus.textContent = `לא ניתן ליצור קטגוריה: ${
+        error.message || "שגיאה לא ידועה"
+      }`;
+      categoryStatus.className = "text-sm mt-2 text-rose-600";
+    }
     return;
   }
   categoryNameInput.value = "";
+  if (categoryStatus) {
+    categoryStatus.textContent = "נשמר בהצלחה ✓";
+    categoryStatus.className = "text-sm mt-2 text-green-600";
+  }
   closeCategoryModal();
   await fetchCategories();
   ensureCategoryOptions();
@@ -2174,6 +2344,40 @@ const setupListeners = () => {
   document
     .getElementById("checkout-form")
     .addEventListener("submit", handleCheckout);
+
+  if (pickupDateInput) {
+    pickupDateInput.addEventListener("change", updatePickupConstraints);
+  }
+  if (pickupTimeInput) {
+    pickupTimeInput.addEventListener("input", updatePickupConstraints);
+  }
+
+  if (orderChannelClose) {
+    orderChannelClose.addEventListener("click", closeOrderChannelModal);
+  }
+  if (orderChannelModal) {
+    orderChannelModal.addEventListener("click", (event) => {
+      if (event.target === orderChannelModal) {
+        closeOrderChannelModal();
+      }
+    });
+  }
+  if (orderChannelWhatsapp) {
+    orderChannelWhatsapp.addEventListener("click", () => {
+      if (state.pendingOrderLinks?.whatsappUrl) {
+        closeOrderChannelModal();
+        window.location.href = state.pendingOrderLinks.whatsappUrl;
+      }
+    });
+  }
+  if (orderChannelEmail) {
+    orderChannelEmail.addEventListener("click", () => {
+      if (state.pendingOrderLinks?.emailUrl) {
+        closeOrderChannelModal();
+        window.location.href = state.pendingOrderLinks.emailUrl;
+      }
+    });
+  }
 
   adminNewOrderButton.addEventListener("click", openOrderModal);
   orderModalClose.addEventListener("click", closeOrderModal);
@@ -2391,6 +2595,7 @@ const init = async () => {
   console.log("[init] Starting initialization...");
   setupListeners();
   updateRoute();
+  updatePickupConstraints();
 
   // Contact info is now loaded from database in fetchSiteMeta()
 
@@ -2399,6 +2604,7 @@ const init = async () => {
     state.products = [];
     state.featuredProducts = [];
     renderProducts();
+    renderCategoryCarousel();
     updateCartUI();
     setAdminUI(false);
     setAboutContent(DEFAULT_ABOUT);
