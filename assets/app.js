@@ -507,7 +507,15 @@ const getCartItems = () => {
         (item) => String(item.id) === String(id)
       );
       if (!product) return null;
-      return { ...product, qty, lineTotal: product.price * qty };
+      const discountedPrice = product.discountPercentage > 0
+        ? product.price * (1 - product.discountPercentage / 100)
+        : product.price;
+      return {
+        ...product,
+        qty,
+        discountedPrice,
+        lineTotal: discountedPrice * qty,
+      };
     })
     .filter(Boolean);
 };
@@ -545,7 +553,10 @@ const updateCartUI = () => {
       <img src="${item.image}" alt="${item.title}" />
       <div class="flex-1">
         <p class="font-semibold text-stone-800">${item.title}</p>
-        <p class="text-sm text-stone-500">${formatCurrency(item.price)} ליח'</p>
+        <p class="text-sm text-stone-500">
+          ${item.discountPercentage > 0 ? `<span class="line-through">${formatCurrency(item.price)}</span> ` : ""}
+          ${formatCurrency(item.discountedPrice)} ליח'
+        </p>
         <div class="flex items-center justify-between mt-2">
           <div class="qty-controls">
             <button data-action="dec" data-id="${item.id}">-</button>
