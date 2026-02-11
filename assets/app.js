@@ -46,6 +46,7 @@ const state = {
 
 const categoryTrackEl = document.getElementById("category-track");
 const productsScrollEl = document.getElementById("products-scroll");
+const productsHeadingEl = document.getElementById("products-heading");
 const productSearchInput = document.getElementById("product-search");
 const cartDrawer = document.getElementById("cart-drawer");
 const cartItemsEl = document.getElementById("cart-items");
@@ -348,6 +349,10 @@ const setActiveCategory = (categoryId) => {
   state.activeCategoryId = categoryId;
   renderCategoryCarousel();
   renderProducts();
+  const productsSection = productsHeadingEl || productsScrollEl;
+  if (productsSection) {
+    productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 };
 
 const getCategoryThumbnail = (categoryId) => {
@@ -2450,6 +2455,8 @@ const handleCreateCategory = async () => {
   closeCategoryModal();
   await fetchCategories();
   ensureCategoryOptions();
+  renderAdmin();
+  renderCategoryCarousel();
 };
 
 const closeCreateModal = () => {
