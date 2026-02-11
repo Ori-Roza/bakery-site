@@ -688,7 +688,7 @@ const renderAdmin = () => {
     if (!categories.length) {
       const row = document.createElement("tr");
       row.innerHTML =
-        "<td colspan='2' class='text-sm text-stone-500'>אין קטגוריות להצגה.</td>";
+        "<td colspan='3' class='text-sm text-stone-500'>אין קטגוריות להצגה.</td>";
       adminCategoriesEl.appendChild(row);
     } else {
       categories.forEach((category) => {
@@ -699,6 +699,9 @@ const renderAdmin = () => {
           <td>${category.category_name}</td>
           <td>
             <img src="${imageSrc}" alt="${category.category_name}" class="admin-category-image" />
+          </td>
+          <td>
+            <button type="button" class="secondary-button" data-action="delete-category">מחק</button>
           </td>
         `;
         adminCategoriesEl.appendChild(row);
@@ -2459,6 +2462,50 @@ const handleCreateCategory = async () => {
   renderCategoryCarousel();
 };
 
+const handleDeleteCategory = async (categoryId) => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  const normalizedId = Number(categoryId);
+  if (!Number.isFinite(normalizedId)) {
+    alert("מזהה קטגוריה לא תקין. יש לרענן את הדף.");
+    return;
+  }
+
+  const hasActiveProducts = state.products.some(
+    (product) =>
+      String(product.categoryId) === String(normalizedId) && product.inStock
+  );
+  if (hasActiveProducts) {
+    alert("אי אפשר למחוק קטגוריה שמקושרת למוצרים פעילים");
+    return;
+  }
+
+  const category = state.categories.find(
+    (item) => String(item.category_id) === String(normalizedId)
+  );
+  const categoryName = category?.category_name || "";
+  const confirmed = window.confirm(
+    categoryName
+      ? `אתם בטוחים שתרצו למחוק את הקטגוריה "${categoryName}"?`
+      : "למחוק את הקטגוריה?"
+  );
+  if (!confirmed) return;
+
+  const { error } = await supabaseClient
+    .from("categories")
+    .delete()
+    .eq("id", normalizedId);
+  if (error) {
+    console.error(error);
+    alert(TECH_SUPPORT_MESSAGE);
+    return;
+  }
+
+  await fetchCategories();
+  renderAdmin();
+  renderCategoryCarousel();
+};
+
 const closeCreateModal = () => {
   createModal.classList.add("hidden");
 };
@@ -2589,6 +2636,15 @@ const setupListeners = () => {
 
   if (adminCategoriesEl) {
     adminCategoriesEl.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest(
+        "button[data-action='delete-category']"
+      );
+      if (deleteButton) {
+        const row = event.target.closest("tr");
+        if (!row || !row.dataset.categoryId) return;
+        handleDeleteCategory(row.dataset.categoryId);
+        return;
+      }
       const row = event.target.closest("tr");
       if (!row || !row.dataset.categoryId) return;
       const category = state.categories.find(
