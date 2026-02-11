@@ -75,6 +75,7 @@ const adminAboutInput = document.getElementById("admin-about");
 const adminAboutSave = document.getElementById("admin-about-save");
 const adminAboutStatus = document.getElementById("admin-about-status");
 const checkoutError = document.getElementById("checkout-error");
+const checkoutForm = document.getElementById("checkout-form");
 const customerNameInput = document.getElementById("customer-name");
 const customerPhoneInput = document.getElementById("customer-phone");
 const orderModal = document.getElementById("order-modal");
@@ -964,6 +965,14 @@ const closeOrderChannelModal = () => {
   state.pendingOrderLinks = null;
 };
 
+const clearCheckoutState = () => {
+  state.cart = {};
+  if (checkoutForm) {
+    checkoutForm.reset();
+  }
+  updateCartUI();
+};
+
 const handleCheckout = async (event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
@@ -1036,11 +1045,7 @@ const handleCheckout = async (event) => {
     return;
   }
 
-  state.cart = {};
-  form.reset();
-  updateCartUI();
   await fetchOrders();
-
   openOrderChannelModal(links);
 };
 
@@ -2634,6 +2639,7 @@ const setupListeners = () => {
     orderChannelWhatsapp.addEventListener("click", () => {
       const whatsappUrl = state.pendingOrderLinks?.whatsappUrl;
       if (!whatsappUrl) return;
+      clearCheckoutState();
       closeOrderChannelModal();
       window.location.href = whatsappUrl;
     });
@@ -2642,6 +2648,7 @@ const setupListeners = () => {
     orderChannelEmail.addEventListener("click", () => {
       const emailUrl = state.pendingOrderLinks?.emailUrl;
       if (!emailUrl) return;
+      clearCheckoutState();
       closeOrderChannelModal();
       window.location.href = emailUrl;
     });
