@@ -2632,18 +2632,18 @@ const setupListeners = () => {
   }
   if (orderChannelWhatsapp) {
     orderChannelWhatsapp.addEventListener("click", () => {
-      if (state.pendingOrderLinks?.whatsappUrl) {
-        closeOrderChannelModal();
-        window.location.href = state.pendingOrderLinks.whatsappUrl;
-      }
+      const whatsappUrl = state.pendingOrderLinks?.whatsappUrl;
+      if (!whatsappUrl) return;
+      closeOrderChannelModal();
+      window.location.href = whatsappUrl;
     });
   }
   if (orderChannelEmail) {
     orderChannelEmail.addEventListener("click", () => {
-      if (state.pendingOrderLinks?.emailUrl) {
-        closeOrderChannelModal();
-        window.location.href = state.pendingOrderLinks.emailUrl;
-      }
+      const emailUrl = state.pendingOrderLinks?.emailUrl;
+      if (!emailUrl) return;
+      closeOrderChannelModal();
+      window.location.href = emailUrl;
     });
   }
 
