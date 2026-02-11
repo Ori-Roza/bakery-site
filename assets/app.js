@@ -268,6 +268,24 @@ const updatePickupConstraints = () => {
   } else {
     pickupTimeInput.removeAttribute("min");
   }
+  setPickupValidity();
+};
+
+const setPickupValidity = () => {
+  if (!pickupDateInput || !pickupTimeInput) return;
+  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const pickupDateTime = getPickupDateTime(
+    pickupDateInput.value,
+    pickupTimeInput.value
+  );
+  const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות";
+  if (!pickupDateTime || pickupDateTime < minDateTime) {
+    pickupDateInput.setCustomValidity(message);
+    pickupTimeInput.setCustomValidity(message);
+  } else {
+    pickupDateInput.setCustomValidity("");
+    pickupTimeInput.setCustomValidity("");
+  }
 };
 
 const setActiveCategory = (categoryId) => {
@@ -846,6 +864,12 @@ const handleCheckout = async (event) => {
     time: formData.get("time"),
     user_notes: formData.get("user_notes")?.trim() || "",
   };
+
+  setPickupValidity();
+  if (!event.target.checkValidity()) {
+    event.target.reportValidity();
+    return;
+  }
 
   const pickupDateTime = getPickupDateTime(payload.date, payload.time);
   const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -2347,9 +2371,11 @@ const setupListeners = () => {
 
   if (pickupDateInput) {
     pickupDateInput.addEventListener("change", updatePickupConstraints);
+    pickupDateInput.addEventListener("input", setPickupValidity);
   }
   if (pickupTimeInput) {
     pickupTimeInput.addEventListener("input", updatePickupConstraints);
+    pickupTimeInput.addEventListener("change", setPickupValidity);
   }
 
   if (orderChannelClose) {
