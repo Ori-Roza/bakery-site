@@ -92,6 +92,7 @@ const orderPaid = document.getElementById("order-paid");
 const orderNotes = document.getElementById("order-notes");
 const adminSearchInput = document.getElementById("admin-search");
 const adminCategoriesEl = document.getElementById("admin-categories");
+const adminCreateCategoryButton = document.getElementById("admin-create-category");
 const productModal = document.getElementById("product-modal");
 const modalClose = document.getElementById("modal-close");
 const modalSave = document.getElementById("modal-save");
@@ -2841,6 +2842,9 @@ const setupListeners = () => {
 
   categoryModalClose.addEventListener("click", closeCategoryModal);
   categorySave.addEventListener("click", handleCreateCategory);
+  if (adminCreateCategoryButton) {
+    adminCreateCategoryButton.addEventListener("click", openCategoryModal);
+  }
 
   if (categoryEditClose) {
     categoryEditClose.addEventListener("click", closeCategoryEditModal);
