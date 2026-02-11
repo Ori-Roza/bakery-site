@@ -723,6 +723,15 @@ img {
   text-align: center;
 }
 
+.admin-category-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 0.65rem;
+  margin: 0 auto;
+  border: 1px solid rgba(145, 70, 30, 0.18);
+}
+
 .admin-table th[data-sort]::after {
   content: "↕";
   margin-inline-start: 0.35rem;

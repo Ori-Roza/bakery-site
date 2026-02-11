@@ -5,6 +5,9 @@ const CONTACT_PHONE_INTL = "972501234567";
 const CONTACT_EMAIL = "ori.roza@bluevine.com";
 const DEFAULT_WHATSAPP_PHONE = CONTACT_PHONE_INTL;
 const DEFAULT_ORDER_EMAIL = CONTACT_EMAIL;
+const TECH_SUPPORT_MESSAGE = "אירעה שגיאה, נא פנו לחנות";
+const CUSTOMER_NAME_REQUIRED = "נא להזין שם מלא";
+const CUSTOMER_PHONE_REQUIRED = "נא להזין מספר טלפון";
 
 const SUPABASE_CONFIG = window.__SUPABASE__ || {};
 const supabaseClient =
@@ -38,6 +41,7 @@ const state = {
   storePhone: CONTACT_PHONE,
   bakeryPhone: CONTACT_PHONE,
   pendingOrderLinks: null,
+  editingCategoryRowId: null,
 };
 
 const categoryTrackEl = document.getElementById("category-track");
@@ -60,6 +64,7 @@ const adminGreetingEl = document.getElementById("admin-greeting");
 const adminLogoutButton = document.getElementById("admin-logout");
 const adminNewOrderButton = document.getElementById("admin-new-order");
 const adminProductsTable = document.getElementById("admin-products-table");
+const adminCategoriesTable = document.getElementById("admin-categories-table");
 const adminOrdersTable = document.getElementById("admin-orders-table");
 const adminOrdersSearchInput = document.getElementById("admin-orders-search");
 const orderDetailsModal = document.getElementById("order-details-modal");
@@ -70,6 +75,8 @@ const adminAboutInput = document.getElementById("admin-about");
 const adminAboutSave = document.getElementById("admin-about-save");
 const adminAboutStatus = document.getElementById("admin-about-status");
 const checkoutError = document.getElementById("checkout-error");
+const customerNameInput = document.getElementById("customer-name");
+const customerPhoneInput = document.getElementById("customer-phone");
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
@@ -83,6 +90,7 @@ const orderTotal = document.getElementById("order-total");
 const orderPaid = document.getElementById("order-paid");
 const orderNotes = document.getElementById("order-notes");
 const adminSearchInput = document.getElementById("admin-search");
+const adminCategoriesEl = document.getElementById("admin-categories");
 const productModal = document.getElementById("product-modal");
 const modalClose = document.getElementById("modal-close");
 const modalSave = document.getElementById("modal-save");
@@ -111,7 +119,15 @@ const categoryModal = document.getElementById("category-modal");
 const categoryModalClose = document.getElementById("category-modal-close");
 const categorySave = document.getElementById("category-save");
 const categoryNameInput = document.getElementById("category-name");
+const categoryImageInput = document.getElementById("category-image");
 const categoryStatus = document.getElementById("category-status");
+const categoryEditModal = document.getElementById("category-edit-modal");
+const categoryEditClose = document.getElementById("category-edit-close");
+const categoryEditNameInput = document.getElementById("category-edit-name");
+const categoryEditImageInput = document.getElementById("category-edit-image");
+const categoryEditPreview = document.getElementById("category-edit-preview");
+const categoryEditSave = document.getElementById("category-edit-save");
+const categoryEditStatus = document.getElementById("category-edit-status");
 const contactBakeryPhoneEl = document.getElementById("contact-bakery-phone");
 const contactBakeryPhoneLinkEl = document.getElementById("contact-bakery-phone-link");
 const contactStorePhoneEl = document.getElementById("contact-store-phone");
@@ -234,6 +250,31 @@ const normalizeProductId = (value) => {
   return Number.isFinite(asNumber) ? asNumber : null;
 };
 
+const showTechErrorStatus = (element) => {
+  if (!element) return;
+  element.textContent = TECH_SUPPORT_MESSAGE;
+  element.className = "text-sm mt-2 text-rose-600";
+};
+
+const bufferToHex = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let hex = "";
+  bytes.forEach((byte) => {
+    hex += byte.toString(16).padStart(2, "0");
+  });
+  return hex;
+};
+
+const hexToBase64 = (hexValue) => {
+  if (!hexValue) return "";
+  const hex = hexValue.startsWith("\\x") ? hexValue.slice(2) : hexValue;
+  let binary = "";
+  for (let i = 0; i < hex.length; i += 2) {
+    binary += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
+  }
+  return btoa(binary);
+};
+
 const formatDateForInput = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -288,6 +329,19 @@ const setPickupValidity = () => {
   }
 };
 
+const setCustomerFieldValidity = () => {
+  if (customerNameInput) {
+    customerNameInput.setCustomValidity(
+      customerNameInput.value.trim() ? "" : CUSTOMER_NAME_REQUIRED
+    );
+  }
+  if (customerPhoneInput) {
+    customerPhoneInput.setCustomValidity(
+      customerPhoneInput.value.trim() ? "" : CUSTOMER_PHONE_REQUIRED
+    );
+  }
+};
+
 const setActiveCategory = (categoryId) => {
   state.activeCategoryId = categoryId;
   renderCategoryCarousel();
@@ -296,12 +350,15 @@ const setActiveCategory = (categoryId) => {
 
 const getCategoryThumbnail = (categoryId) => {
   if (!categoryId) {
-    return state.products[0]?.image || "assets/wheat.png";
+    return "assets/all_categories.png";
   }
-  const match = state.products.find(
-    (product) => String(product.categoryId) === String(categoryId)
+  const category = state.categories.find(
+    (item) => String(item.category_id) === String(categoryId)
   );
-  return match?.image || "assets/wheat.png";
+  if (category?.image_url) {
+    return category.image_url;
+  }
+  return "assets/all_categories.png";
 };
 
 const renderCategoryCarousel = () => {
@@ -605,6 +662,32 @@ const renderAdmin = () => {
     adminProductsEl.appendChild(row);
   });
 
+  if (adminCategoriesEl) {
+    adminCategoriesEl.innerHTML = "";
+    const categories = [...state.categories].sort((a, b) =>
+      a.category_name.localeCompare(b.category_name, "he")
+    );
+    if (!categories.length) {
+      const row = document.createElement("tr");
+      row.innerHTML =
+        "<td colspan='2' class='text-sm text-stone-500'>אין קטגוריות להצגה.</td>";
+      adminCategoriesEl.appendChild(row);
+    } else {
+      categories.forEach((category) => {
+        const row = document.createElement("tr");
+        row.dataset.categoryId = category.category_id;
+        const imageSrc = category.image_url || "assets/all_categories.png";
+        row.innerHTML = `
+          <td>${category.category_name}</td>
+          <td>
+            <img src="${imageSrc}" alt="${category.category_name}" class="admin-category-image" />
+          </td>
+        `;
+        adminCategoriesEl.appendChild(row);
+      });
+    }
+  }
+
   adminOrdersEl.innerHTML = "";
   const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
   const filteredOrders = state.orders.filter((order) => {
@@ -761,7 +844,7 @@ const uploadProductImage = async (file, prefix) => {
 
   if (error) {
     console.error(error);
-    alert("העלאת התמונה נכשלה.");
+    alert(TECH_SUPPORT_MESSAGE);
     return null;
   }
 
@@ -771,6 +854,31 @@ const uploadProductImage = async (file, prefix) => {
 
   return data.publicUrl;
 };
+
+const uploadCategoryImage = async (file, prefix) => {
+  if (!file) return null;
+  if (!ensureSupabase()) return null;
+  const ext = file.name.split(".").pop();
+  const fileName = `${prefix}-${Date.now()}.${ext}`;
+  const filePath = `categories/${fileName}`;
+
+  const { error } = await supabaseClient
+    .storage
+    .from("product-images")
+    .upload(filePath, file, { upsert: true });
+
+  if (error) {
+    console.error(error);
+    return null;
+  }
+
+  const { data } = supabaseClient.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
 
 const openCart = () => {
   cartDrawer.classList.add("open");
@@ -909,8 +1017,9 @@ const handleCheckout = async (event) => {
   ]);
 
   if (error) {
+    console.error(error);
     if (checkoutError) {
-      checkoutError.textContent = "לא ניתן לשמור הזמנה כרגע. נסו שוב.";
+      checkoutError.textContent = TECH_SUPPORT_MESSAGE;
       checkoutError.classList.remove("hidden");
     }
     return;
@@ -954,7 +1063,7 @@ const handleCreateOrder = async () => {
 
   if (error) {
     console.error(error);
-    alert("לא ניתן ליצור הזמנה.");
+    alert(TECH_SUPPORT_MESSAGE);
     return;
   }
 
@@ -1026,10 +1135,7 @@ const handleAdminChange = async () => {
   if (error) {
     console.error(error);
     if (modalStatus) {
-      modalStatus.textContent = `עדכון המוצר נכשל: ${
-        error.message || "שגיאה לא ידועה"
-      }`;
-      modalStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(modalStatus);
     }
     return;
   }
@@ -1079,7 +1185,8 @@ const handleCreateProduct = async () => {
     .insert([mapProductToDb(product)]);
 
   if (error) {
-    alert("יצירת המוצר נכשלה.");
+    console.error(error);
+    alert(TECH_SUPPORT_MESSAGE);
     return;
   }
 
@@ -1110,7 +1217,7 @@ const handleDeleteProduct = async (id) => {
     .eq("id", productId);
   if (error) {
     console.error(error);
-    alert(`מחיקת המוצר נכשלה: ${error.message || "שגיאה לא ידועה"}`);
+    alert(TECH_SUPPORT_MESSAGE);
     return;
   }
   await fetchProducts();
@@ -1203,7 +1310,7 @@ const fetchCategories = async () => {
   console.log("[fetchCategories] Fetching from database...");
   const { data, error } = await supabaseClient
     .from("categories")
-    .select("id,name");
+    .select("id,name,image_url");
 
   if (error) {
     console.error("[fetchCategories] Error:", error);
@@ -1215,6 +1322,7 @@ const fetchCategories = async () => {
   state.categories = (data || []).map((item) => ({
     category_id: item.id,
     category_name: item.name,
+    image_url: item.image_url || "",
   }));
   console.log("[fetchCategories] Mapped categories:", state.categories);
   ensureCategoryOptions();
@@ -1378,10 +1486,9 @@ const saveAboutContent = async () => {
 
   if (error) {
     console.error(error);
-    alert("לא ניתן לשמור אודות כרגע.");
+    alert(TECH_SUPPORT_MESSAGE);
     if (adminAboutStatus) {
-      adminAboutStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminAboutStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminAboutStatus);
     }
     return;
   }
@@ -1417,7 +1524,7 @@ const uploadLogoImage = async (file) => {
 
   if (error) {
     console.error(error);
-    alert("העלאת הלוגו נכשלה.");
+    alert(TECH_SUPPORT_MESSAGE);
     return null;
   }
 
@@ -1443,7 +1550,7 @@ const uploadHeroImage = async (file) => {
 
   if (error) {
     console.error(error);
-    alert("העלאת התמונה נכשלה.");
+    alert(TECH_SUPPORT_MESSAGE);
     return null;
   }
 
@@ -1523,7 +1630,7 @@ const saveLogoImage = async (file) => {
 
   if (error) {
     console.error(error);
-    alert("לא ניתן לשמור לוגו כרגע.");
+    alert(TECH_SUPPORT_MESSAGE);
     return;
   }
 
@@ -1654,8 +1761,7 @@ const saveHeaderTitle = async () => {
   if (error) {
     console.error(error);
     if (adminHeaderTitleStatus) {
-      adminHeaderTitleStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminHeaderTitleStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminHeaderTitleStatus);
     }
     return;
   }
@@ -1722,8 +1828,7 @@ const saveHero = async () => {
   if (error) {
     console.error(error);
     if (adminHeroStatus) {
-      adminHeroStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminHeroStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminHeroStatus);
     }
     return;
   }
@@ -1866,8 +1971,7 @@ const saveFeaturedProducts = async () => {
   if (deleteError) {
     console.error(deleteError);
     if (adminFeaturedStatus) {
-      adminFeaturedStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminFeaturedStatus);
     }
     return;
   }
@@ -1885,8 +1989,7 @@ const saveFeaturedProducts = async () => {
   if (error) {
     console.error(error);
     if (adminFeaturedStatus) {
-      adminFeaturedStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminFeaturedStatus);
     }
     return;
   }
@@ -1968,8 +2071,7 @@ const saveContactInfo = async () => {
   if (error) {
     console.error("[saveContactInfo] Database error:", error);
     if (adminContactStatus) {
-      adminContactStatus.textContent = "שגיאה בשמירה. בדקו הרשאות.";
-      adminContactStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(adminContactStatus);
     }
     return;
   }
@@ -2175,6 +2277,103 @@ const closeCategoryModal = () => {
   categoryModal.classList.add("hidden");
 };
 
+const openCategoryEditModal = (category) => {
+  if (!categoryEditModal) return;
+  state.editingCategoryRowId = category.category_id;
+  categoryEditNameInput.value = category.category_name;
+  if (categoryEditImageInput) {
+    categoryEditImageInput.value = "";
+  }
+  if (categoryEditPreview) {
+    const previewSrc = category.image_url || "assets/all_categories.png";
+    categoryEditPreview.innerHTML = `
+      <img src="${previewSrc}" alt="${category.category_name}" class="admin-category-image" />
+    `;
+  }
+  if (categoryEditStatus) {
+    categoryEditStatus.textContent = "";
+    categoryEditStatus.className = "text-sm mt-2";
+  }
+  categoryEditModal.classList.remove("hidden");
+};
+
+const closeCategoryEditModal = () => {
+  if (!categoryEditModal) return;
+  categoryEditModal.classList.add("hidden");
+  state.editingCategoryRowId = null;
+  if (categoryEditStatus) {
+    categoryEditStatus.textContent = "";
+    categoryEditStatus.className = "text-sm mt-2";
+  }
+};
+
+const handleUpdateCategory = async () => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  if (!state.editingCategoryRowId) return;
+
+  const name = categoryEditNameInput.value.trim();
+  if (!name) {
+    if (categoryEditStatus) {
+      categoryEditStatus.textContent = "יש להזין שם קטגוריה.";
+      categoryEditStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  const duplicate = state.categories.some(
+    (category) =>
+      category.category_name === name &&
+      String(category.category_id) !== String(state.editingCategoryRowId)
+  );
+  if (duplicate) {
+    if (categoryEditStatus) {
+      categoryEditStatus.textContent = "הקטגוריה כבר קיימת.";
+      categoryEditStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  if (categoryEditStatus) {
+    categoryEditStatus.textContent = "שומר...";
+    categoryEditStatus.className = "text-sm mt-2 text-stone-500";
+  }
+
+  const category = state.categories.find(
+    (item) => String(item.category_id) === String(state.editingCategoryRowId)
+  );
+  let imageUrl = category?.image_url || "assets/all_categories.png";
+  if (categoryEditImageInput?.files?.length) {
+    const file = categoryEditImageInput.files[0];
+    const uploadedUrl = await uploadCategoryImage(file, name || "category");
+    if (!uploadedUrl) {
+      if (categoryEditStatus) {
+        showTechErrorStatus(categoryEditStatus);
+      }
+      return;
+    }
+    imageUrl = uploadedUrl;
+  }
+
+  const { error } = await supabaseClient
+    .from("categories")
+    .update({ name, image_url: imageUrl })
+    .eq("id", state.editingCategoryRowId);
+
+  if (error) {
+    console.error(error);
+    if (categoryEditStatus) {
+      showTechErrorStatus(categoryEditStatus);
+    }
+    return;
+  }
+
+  await fetchCategories();
+  renderAdmin();
+  renderCategoryCarousel();
+  closeCategoryEditModal();
+};
+
 const handleCreateCategory = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
@@ -2200,20 +2399,33 @@ const handleCreateCategory = async () => {
     categoryStatus.textContent = "שומר...";
     categoryStatus.className = "text-sm mt-2 text-stone-500";
   }
+
+  let imageUrl = "assets/all_categories.png";
+  if (categoryImageInput?.files?.length) {
+    const file = categoryImageInput.files[0];
+    const uploadedUrl = await uploadCategoryImage(file, name || "category");
+    if (!uploadedUrl) {
+      if (categoryStatus) {
+        showTechErrorStatus(categoryStatus);
+      }
+      return;
+    }
+    imageUrl = uploadedUrl;
+  }
   const { error } = await supabaseClient.from("categories").insert([
-    { name },
+    { name, image_url: imageUrl },
   ]);
   if (error) {
     console.error(error);
     if (categoryStatus) {
-      categoryStatus.textContent = `לא ניתן ליצור קטגוריה: ${
-        error.message || "שגיאה לא ידועה"
-      }`;
-      categoryStatus.className = "text-sm mt-2 text-rose-600";
+      showTechErrorStatus(categoryStatus);
     }
     return;
   }
   categoryNameInput.value = "";
+  if (categoryImageInput) {
+    categoryImageInput.value = "";
+  }
   if (categoryStatus) {
     categoryStatus.textContent = "נשמר בהצלחה ✓";
     categoryStatus.className = "text-sm mt-2 text-green-600";
@@ -2351,6 +2563,19 @@ const setupListeners = () => {
     }
   });
 
+  if (adminCategoriesEl) {
+    adminCategoriesEl.addEventListener("click", (event) => {
+      const row = event.target.closest("tr");
+      if (!row || !row.dataset.categoryId) return;
+      const category = state.categories.find(
+        (item) => String(item.category_id) === String(row.dataset.categoryId)
+      );
+      if (category) {
+        openCategoryEditModal(category);
+      }
+    });
+  }
+
   document.getElementById("close-cart").addEventListener("click", closeCart);
   overlay.addEventListener("click", closeCart);
   floatingCart.addEventListener("click", openCart);
@@ -2376,6 +2601,12 @@ const setupListeners = () => {
   if (pickupTimeInput) {
     pickupTimeInput.addEventListener("input", updatePickupConstraints);
     pickupTimeInput.addEventListener("change", setPickupValidity);
+  }
+  if (customerNameInput) {
+    customerNameInput.addEventListener("input", setCustomerFieldValidity);
+  }
+  if (customerPhoneInput) {
+    customerPhoneInput.addEventListener("input", setCustomerFieldValidity);
   }
 
   if (orderChannelClose) {
@@ -2592,6 +2823,13 @@ const setupListeners = () => {
 
   categoryModalClose.addEventListener("click", closeCategoryModal);
   categorySave.addEventListener("click", handleCreateCategory);
+
+  if (categoryEditClose) {
+    categoryEditClose.addEventListener("click", closeCategoryEditModal);
+  }
+  if (categoryEditSave) {
+    categoryEditSave.addEventListener("click", handleUpdateCategory);
+  }
 
   document.addEventListener("click", (event) => {
     if (
