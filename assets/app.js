@@ -3001,11 +3001,15 @@ const setupListeners = () => {
     .addEventListener("click", () => {
       closeCart();
       setTimeout(() => {
-        document.getElementById("checkout").scrollIntoView({
+        const checkoutSection = document.getElementById("checkout");
+        checkoutSection.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
-      }, 100);
+        // Focus first input to ensure keyboard appears on mobile
+        const firstInput = checkoutSection.querySelector("input");
+        if (firstInput) firstInput.focus();
+      }, 300);
     });
 
   document
