@@ -285,22 +285,23 @@ const hexToBase64 = (hexValue) => {
 
 // Business hours configuration
 const BUSINESS_HOURS = {
-  // Sunday (0) through Friday (5): 06:00-15:00
-  // Saturday (6): Closed
+  // Sunday (0) through Thursday (4): 06:00-15:00
+  // Friday (5) and Saturday (6): Closed
   weekDays: {
     0: { open: 6, close: 15 }, // Sunday
     1: { open: 6, close: 15 }, // Monday
     2: { open: 6, close: 15 }, // Tuesday
     3: { open: 6, close: 15 }, // Wednesday
     4: { open: 6, close: 15 }, // Thursday
-    5: { open: 6, close: 15 }, // Friday
+    5: null, // Friday - Closed
     6: null, // Saturday - Closed
   },
 };
 
 const isBusinessDay = (date) => {
-  // Check if Saturday
-  if (date.getDay() === 6) return false;
+  // Check if Friday (5) or Saturday (6)
+  const day = date.getDay();
+  if (day === 5 || day === 6) return false;
   return true;
 };
 
@@ -320,13 +321,13 @@ const getNextBusinessDateTime = (fromDate) => {
   
   // Find next available business day starting from today
   let attempts = 0;
-  const maxAttempts = 7; // Search up to a week
+  const maxAttempts = 14; // Search up to 2 weeks
   
   while (attempts < maxAttempts) {
     const day = nextDate.getDay();
     const hours = BUSINESS_HOURS.weekDays[day];
     
-    // If closed on this day (Saturday), move to next day
+    // If closed on this day (Friday or Saturday), move to next day
     if (!hours) {
       nextDate.setDate(nextDate.getDate() + 1);
       nextDate.setHours(0, 0, 0, 0);
@@ -368,55 +369,26 @@ const getPickupDateTime = (dateValue, timeValue) => {
 const updatePickupConstraints = () => {
   if (!pickupDateInput || !pickupTimeInput) return;
   
-  // Get next available business date/time (24 hours + business hours)
+  // Get next available business date/time
   const minDateTime = getNextBusinessDateTime(new Date());
   const minDate = formatDateForInput(minDateTime);
   pickupDateInput.min = minDate;
 
-  // Check if user selected Saturday
+  // Check if user selected a date
   if (pickupDateInput.value) {
     const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
     const selectedDay = selectedDate.getDay();
     
-    // Check if Saturday
-    if (selectedDay === 6) {
+    // Check if Friday (5) or Saturday (6) - not allowed
+    if (selectedDay === 5 || selectedDay === 6) {
       pickupDateInput.value = '';
       if (checkoutError) {
-        checkoutError.textContent = "ביום שבת אנו סגורים. נא לבחור יום אחר.";
+        checkoutError.textContent = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
         checkoutError.classList.remove("hidden");
-        setTimeout(() => checkoutError.classList.add("hidden"), 3000);
+        setTimeout(() => checkoutError.classList.add("hidden"), 4000);
       }
       return;
     }
-  }
-
-  // If selected date is the minimum date, restrict time to business hours
-  if (pickupDateInput.value === minDate) {
-    pickupTimeInput.min = formatTimeForInput(minDateTime);
-    
-    // Get closing time for the selected day
-    const selectedDay = minDateTime.getDay();
-    const hours = BUSINESS_HOURS.weekDays[selectedDay];
-    if (hours) {
-      pickupTimeInput.max = `${String(hours.close).padStart(2, '0')}:00`;
-    }
-  } else if (pickupDateInput.value) {
-    // For other dates, set business hours constraints
-    const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
-    const selectedDay = selectedDate.getDay();
-    const hours = BUSINESS_HOURS.weekDays[selectedDay];
-    
-    if (hours) {
-      pickupTimeInput.min = `${String(hours.open).padStart(2, '0')}:00`;
-      pickupTimeInput.max = `${String(hours.close).padStart(2, '0')}:00`;
-    } else {
-      // Saturday - closed, should not be selectable
-      pickupTimeInput.min = '';
-      pickupTimeInput.max = '';
-    }
-  } else {
-    pickupTimeInput.removeAttribute("min");
-    pickupTimeInput.removeAttribute("max");
   }
   
   setPickupValidity();
@@ -441,9 +413,9 @@ const setPickupValidity = () => {
   const day = pickupDateTime.getDay();
   const hours = BUSINESS_HOURS.weekDays[day];
   
-  // Check if Saturday (closed)
+  // Check if Friday (5) or Saturday (6) - closed
   if (!hours) {
-    const message = "ביום שבת אנו סגורים";
+    const message = "לא ניתן להזמין בשישי או שבת";
     pickupDateInput.setCustomValidity(message);
     pickupTimeInput.setCustomValidity(message);
     return;
@@ -457,17 +429,38 @@ const setPickupValidity = () => {
     return;
   }
   
-  // Check business hours
-  const hour = pickupDateTime.getHours();
-  if (hour < hours.open || hour >= hours.close) {
-    const message = `שעות פעילות: א׳-ו׳ ${String(hours.open).padStart(2, '0')}:00-${String(hours.close).padStart(2, '0')}:00`;
-    pickupTimeInput.setCustomValidity(message);
-    return;
-  }
-  
   // Valid
   pickupDateInput.setCustomValidity("");
   pickupTimeInput.setCustomValidity("");
+};
+
+const validateAndFixPickupDate = () => {
+  if (!pickupDateInput || !pickupDateInput.value) return;
+  
+  const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
+  const selectedDay = selectedDate.getDay();
+  
+  // Check if Friday (5) or Saturday (6)
+  if (selectedDay === 5 || selectedDay === 6) {
+    // Reset to empty
+    pickupDateInput.value = '';
+    if (checkoutError) {
+      checkoutError.textContent = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
+      checkoutError.classList.remove("hidden");
+      setTimeout(() => checkoutError.classList.add("hidden"), 4000);
+    }
+    return;
+  }
+  
+  updatePickupConstraints();
+};
+
+const validateAndFixPickupTime = () => {
+  if (!pickupTimeInput || !pickupTimeInput.value) return;
+  
+  // With select dropdown, time range is already restricted by HTML options
+  // Just call updatePickupConstraints for consistency
+  updatePickupConstraints();
 };
 
 const setCustomerFieldValidity = () => {
@@ -3017,12 +3010,12 @@ const setupListeners = () => {
     .addEventListener("submit", handleCheckout);
 
   if (pickupDateInput) {
-    pickupDateInput.addEventListener("change", updatePickupConstraints);
-    pickupDateInput.addEventListener("input", setPickupValidity);
+    pickupDateInput.addEventListener("change", validateAndFixPickupDate);
+    pickupDateInput.addEventListener("input", validateAndFixPickupDate);
   }
   if (pickupTimeInput) {
-    pickupTimeInput.addEventListener("input", updatePickupConstraints);
-    pickupTimeInput.addEventListener("change", setPickupValidity);
+    pickupTimeInput.addEventListener("input", validateAndFixPickupTime);
+    pickupTimeInput.addEventListener("change", validateAndFixPickupTime);
   }
   if (customerNameInput) {
     customerNameInput.addEventListener("input", setCustomerFieldValidity);

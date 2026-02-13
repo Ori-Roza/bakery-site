@@ -346,8 +346,14 @@ img {
 }
 
 .form-input[type="date"],
-.form-input[type="time"] {
+.form-input[type="time"],
+.form-input[type="select"] {
   cursor: pointer;
+}
+
+select.form-input {
+  cursor: pointer;
+  padding-right: 2.5rem;
 }
 
 /* Prevent selecting invalid dates in date picker */
