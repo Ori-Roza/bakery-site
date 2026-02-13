@@ -285,23 +285,22 @@ const hexToBase64 = (hexValue) => {
 
 // Business hours configuration
 const BUSINESS_HOURS = {
-  // Sunday (0) through Thursday (4): 06:00-15:00
-  // Friday (5) and Saturday (6): Closed
+  // Sunday (0) through Friday (5): 06:00-15:00
+  // Saturday (6): Closed
   weekDays: {
     0: { open: 6, close: 15 }, // Sunday
     1: { open: 6, close: 15 }, // Monday
     2: { open: 6, close: 15 }, // Tuesday
     3: { open: 6, close: 15 }, // Wednesday
     4: { open: 6, close: 15 }, // Thursday
-    5: null, // Friday - Closed
+    5: { open: 6, close: 15 }, // Friday
     6: null, // Saturday - Closed
   },
 };
 
 const isBusinessDay = (date) => {
-  // Check if Friday (5) or Saturday (6)
-  const day = date.getDay();
-  if (day === 5 || day === 6) return false;
+  // Check if Saturday
+  if (date.getDay() === 6) return false;
   return true;
 };
 
@@ -321,13 +320,13 @@ const getNextBusinessDateTime = (fromDate) => {
   
   // Find next available business day starting from today
   let attempts = 0;
-  const maxAttempts = 14; // Search up to 2 weeks
+  const maxAttempts = 7; // Search up to a week
   
   while (attempts < maxAttempts) {
     const day = nextDate.getDay();
     const hours = BUSINESS_HOURS.weekDays[day];
     
-    // If closed on this day (Friday or Saturday), move to next day
+    // If closed on this day (Saturday), move to next day
     if (!hours) {
       nextDate.setDate(nextDate.getDate() + 1);
       nextDate.setHours(0, 0, 0, 0);
@@ -415,7 +414,7 @@ const setPickupValidity = () => {
   
   // Check if Friday (5) or Saturday (6) - closed
   if (!hours) {
-    const message = "לא ניתן להזמין בשישי או שבת";
+    const message = "ביום שבת אנו סגורים";
     pickupDateInput.setCustomValidity(message);
     pickupTimeInput.setCustomValidity(message);
     return;
@@ -440,12 +439,12 @@ const validateAndFixPickupDate = () => {
   const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
   const selectedDay = selectedDate.getDay();
   
-  // Check if Friday (5) or Saturday (6)
-  if (selectedDay === 5 || selectedDay === 6) {
+  // Check if Saturday (6)
+  if (selectedDay === 6) {
     // Reset to empty
     pickupDateInput.value = '';
     if (checkoutError) {
-      checkoutError.textContent = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
+      checkoutError.textContent = "ביום שבת אנו סגורים. בחרו יום אחר.";
       checkoutError.classList.remove("hidden");
       setTimeout(() => checkoutError.classList.add("hidden"), 4000);
     }
@@ -1176,8 +1175,8 @@ const handleCheckout = async (event) => {
   
   // Check if date is Friday (5) or Saturday (6)
   const day = pickupDateTime.getDay();
-  if (day === 5 || day === 6) {
-    const message = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
+  if (day === 6) {
+    const message = "ביום שבת אנו סגורים. בחרו יום אחר.";
     if (checkoutError) {
       checkoutError.textContent = message;
       checkoutError.classList.remove("hidden");
@@ -1190,7 +1189,7 @@ const handleCheckout = async (event) => {
   const hours = BUSINESS_HOURS.weekDays[day];
   const hour = pickupDateTime.getHours();
   if (!hours || hour < 6 || hour >= 15) {
-    const message = "שעות פעילות: ראשון-חמישי 06:00-15:00";
+    const message = "שעות פעילות: א׳-ו׳ 06:00-15:00";
     if (checkoutError) {
       checkoutError.textContent = message;
       checkoutError.classList.remove("hidden");
