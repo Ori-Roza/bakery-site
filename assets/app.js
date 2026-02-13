@@ -1045,11 +1045,15 @@ const uploadCategoryImage = async (file, prefix) => {
 const openCart = () => {
   cartDrawer.classList.add("open");
   overlay.classList.remove("hidden");
+  // Prevent body scroll on mobile when cart is open
+  document.body.style.overflow = "hidden";
 };
 
 const closeCart = () => {
   cartDrawer.classList.remove("open");
   overlay.classList.add("hidden");
+  // Re-enable body scroll
+  document.body.style.overflow = "";
 };
 
 const addToCart = (id) => {
