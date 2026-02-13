@@ -192,7 +192,7 @@ document.body.appendChild(notesPopover);
 const notesTextarea = notesPopover.querySelector(".notes-textarea");
 let activeNotesInput = null;
 
-const formatCurrency = (value) => `₪${Number(value).toFixed(0)}`;
+const formatCurrency = (value) => `₪${Number(value).toFixed(2)}`;
 const DEFAULT_ABOUT =
   "בית מאפה ברכת יעקב הוא מאפייה משפחתית עם אהבה לבצק, לחום של התנור ולטעמים של בית. אנו אופים מדי יום חלות, לחמים ומאפים טריים מחומרי גלם איכותיים, עם הקפדה על טריות, שירות אישי וחוויה נעימה לכל המשפחה.\n\nהמטרה שלנו היא לשלב בין מסורת לאיכות מודרנית — כדי שתוכלו ליהנות מארוחה חמה, שולחן שבת עשיר ורגעים מתוקים לאורך השבוע.";
 
