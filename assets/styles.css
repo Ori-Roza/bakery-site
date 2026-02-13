@@ -275,6 +275,10 @@ img {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   min-height: 44px;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
 }
 
 @media (min-width: 641px) {
@@ -624,6 +628,10 @@ select.form-input {
   background: rgba(30, 20, 10, 0.4);
   z-index: 30;
   pointer-events: none;
+}
+
+.overlay.hidden {
+  pointer-events: none !important;
 }
 
 .overlay:not(.hidden) {

@@ -1254,7 +1254,13 @@ const handleCheckout = async (event) => {
   }
 
   await fetchOrders();
-  openOrderChannelModal(links);
+  closeCart();
+  // Delay modal open slightly to let cart close first (iOS Safari fix)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      openOrderChannelModal(links);
+    });
+  });
 };
 
 const handleCreateOrder = async () => {
