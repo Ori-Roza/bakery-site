@@ -3000,10 +3000,12 @@ const setupListeners = () => {
     .getElementById("checkout-scroll")
     .addEventListener("click", () => {
       closeCart();
-      document.getElementById("checkout").scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      setTimeout(() => {
+        document.getElementById("checkout").scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
     });
 
   document
