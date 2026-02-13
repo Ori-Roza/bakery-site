@@ -1174,33 +1174,39 @@ const handleCheckout = async (event) => {
     return;
   }
   
-  // Check if date is Saturday
+  // Check if date is Friday (5) or Saturday (6)
   const day = pickupDateTime.getDay();
-  if (day === 6) {
+  if (day === 5 || day === 6) {
+    const message = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
     if (checkoutError) {
-      checkoutError.textContent = "ביום שבת אנו סגורים.";
+      checkoutError.textContent = message;
       checkoutError.classList.remove("hidden");
     }
+    alert(message);
     return;
   }
   
   // Check business hours
   const hours = BUSINESS_HOURS.weekDays[day];
   const hour = pickupDateTime.getHours();
-  if (!hours || hour < hours.open || hour >= hours.close) {
+  if (!hours || hour < 6 || hour >= 15) {
+    const message = "שעות פעילות: ראשון-חמישי 06:00-15:00";
     if (checkoutError) {
-      checkoutError.textContent = `שעות פעילות: א׳-ו׳ 06:00-15:00`;
+      checkoutError.textContent = message;
       checkoutError.classList.remove("hidden");
     }
+    alert(message);
     return;
   }
   
   // Check 24 hour minimum
   if (pickupDateTime < minDateTime) {
+    const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות מראש בשעות פעילות";
     if (checkoutError) {
-      checkoutError.textContent = "יש לבחור מועד איסוף לפחות 24 שעות מראש בשעות פעילות.";
+      checkoutError.textContent = message;
       checkoutError.classList.remove("hidden");
     }
+    alert(message);
     return;
   }
 
