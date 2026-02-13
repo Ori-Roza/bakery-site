@@ -63,9 +63,9 @@ img {
 }
 
 .hero-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.2;
 }
 
 .badge {
@@ -348,6 +348,15 @@ img {
 .form-input[type="date"],
 .form-input[type="time"] {
   cursor: pointer;
+}
+
+/* Prevent selecting invalid dates in date picker */
+.form-input[type="date"]:invalid {
+  color: #d97706;
+}
+
+.form-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0.8);
 }
 
 @media (max-width: 640px) {

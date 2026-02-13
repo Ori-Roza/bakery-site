@@ -315,47 +315,27 @@ const isWithinBusinessHours = (date) => {
 };
 
 const getNextBusinessDateTime = (fromDate) => {
-  // Start 24 hours from now
-  let nextDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000);
+  // Start from today at midnight
+  let nextDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0, 0);
   
-  // Round up to next hour
-  nextDate.setMinutes(0, 0, 0);
-  if (nextDate.getTime() <= fromDate.getTime() + 24 * 60 * 60 * 1000) {
-    nextDate.setHours(nextDate.getHours() + 1);
-  }
-  
-  // Find next available business hour
+  // Find next available business day starting from today
   let attempts = 0;
-  const maxAttempts = 7 * 24; // Search up to a week
+  const maxAttempts = 7; // Search up to a week
   
   while (attempts < maxAttempts) {
     const day = nextDate.getDay();
     const hours = BUSINESS_HOURS.weekDays[day];
-    const currentHour = nextDate.getHours();
     
-    // If closed on this day (Saturday), move to next day at opening hour
+    // If closed on this day (Saturday), move to next day
     if (!hours) {
       nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(6, 0, 0, 0);
+      nextDate.setHours(0, 0, 0, 0);
       attempts++;
       continue;
     }
     
-    // If before opening hours, set to opening hour
-    if (currentHour < hours.open) {
-      nextDate.setHours(hours.open, 0, 0, 0);
-      break;
-    }
-    
-    // If after closing hours, move to next day
-    if (currentHour >= hours.close) {
-      nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(6, 0, 0, 0);
-      attempts++;
-      continue;
-    }
-    
-    // Within business hours
+    // Found an open day, set to opening hour
+    nextDate.setHours(hours.open, 0, 0, 0);
     break;
   }
   
