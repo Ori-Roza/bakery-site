@@ -378,11 +378,11 @@ const updatePickupConstraints = () => {
     const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
     const selectedDay = selectedDate.getDay();
     
-    // Check if Friday (5) or Saturday (6) - not allowed
-    if (selectedDay === 5 || selectedDay === 6) {
+    // Check if Saturday (6) - not allowed
+    if (selectedDay === 6) {
       pickupDateInput.value = '';
       if (checkoutError) {
-        checkoutError.textContent = "לא ניתן להזמין בשישי או שבת. בחרו יום אחר.";
+        checkoutError.textContent = "ביום שבת אנו סגורים. בחרו יום אחר.";
         checkoutError.classList.remove("hidden");
         setTimeout(() => checkoutError.classList.add("hidden"), 4000);
       }
@@ -1184,7 +1184,7 @@ const handleCheckout = async (event) => {
   // Check business hours
   const hours = BUSINESS_HOURS.weekDays[day];
   const hour = pickupDateTime.getHours();
-  if (!hours || hour < 6 || hour >= 15) {
+  if (!hours || hour < hours.open || hour > hours.close) {
     const message = "שעות פעילות: א׳-ו׳ 06:00-15:00";
     if (checkoutError) {
       checkoutError.textContent = message;
