@@ -91,6 +91,18 @@ img {
   color: #92442d;
 }
 
+.products-section {
+  border: 2px solid #92442d;
+  padding: 1.5rem;
+  border-radius: 1rem;
+}
+
+.categories-section {
+  border: 2px solid #92442d;
+  padding: 1.5rem;
+  border-radius: 1rem;
+}
+
 @media (max-width: 640px) {
   .section-title {
     font-size: 1.25rem;
