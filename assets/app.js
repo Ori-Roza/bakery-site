@@ -443,11 +443,7 @@ const validateAndFixPickupDate = () => {
   if (selectedDay === 6) {
     // Reset to empty
     pickupDateInput.value = '';
-    if (checkoutError) {
-      checkoutError.textContent = "ביום שבת אנו סגורים. בחרו יום אחר.";
-      checkoutError.classList.remove("hidden");
-      setTimeout(() => checkoutError.classList.add("hidden"), 4000);
-    }
+    alert("ביום שבת אנו סגורים. בחרו יום אחר.");
     return;
   }
   
