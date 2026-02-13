@@ -187,7 +187,7 @@
               href="#"
               class="flex items-center gap-2 text-stone-700 break-all"
             >
-              <i data-lucide="phone" class="w-4 h-4 flex-shrink-0"></i>
+              <i data-lucide="smartphone" class="w-4 h-4 flex-shrink-0"></i>
               <span id="contact-store-phone">050-123-4567</span>
             </a>
             <a
@@ -277,6 +277,20 @@
           </div>
 
           <div id="admin-panel" class="admin-grid hidden">
+            <div class="admin-card">
+              <div class="flex items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-200">
+                <div>
+                  <h4 class="admin-title mb-1">קבלת הזמנות</h4>
+                  <p class="text-sm text-stone-600">הפעל/כבה את האפשרות לקבל הזמנות חדשות</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="orders-accepting-toggle" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  <span id="orders-accepting-label" class="ms-3 text-sm font-medium text-stone-700">פתוח</span>
+                </label>
+              </div>
+            </div>
+            
             <div class="admin-card">
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <h4 class="admin-title">ניהול מוצרים</h4>

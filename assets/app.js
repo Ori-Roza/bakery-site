@@ -37,11 +37,14 @@ const state = {
   heroDescription: "",
   activeCategoryId: null,
   checkoutWhatsappPhone: DEFAULT_WHATSAPP_PHONE,
+  pendingDeleteType: null,
+  pendingDeleteId: null,
   checkoutEmail: DEFAULT_ORDER_EMAIL,
   storePhone: CONTACT_PHONE,
   bakeryPhone: CONTACT_PHONE,
   pendingOrderLinks: null,
   editingCategoryRowId: null,
+  ordersAccepting: true,
 };
 
 const categoryTrackEl = document.getElementById("category-track");
@@ -94,6 +97,8 @@ const orderNotes = document.getElementById("order-notes");
 const adminSearchInput = document.getElementById("admin-search");
 const adminCategoriesEl = document.getElementById("admin-categories");
 const adminCreateCategoryButton = document.getElementById("admin-create-category");
+const ordersAcceptingToggle = document.getElementById("orders-accepting-toggle");
+const ordersAcceptingLabel = document.getElementById("orders-accepting-label");
 const productModal = document.getElementById("product-modal");
 const modalClose = document.getElementById("modal-close");
 const modalSave = document.getElementById("modal-save");
@@ -278,6 +283,85 @@ const hexToBase64 = (hexValue) => {
   return btoa(binary);
 };
 
+// Business hours configuration
+const BUSINESS_HOURS = {
+  // Sunday (0) through Friday (5): 06:00-15:00
+  // Saturday (6): Closed
+  weekDays: {
+    0: { open: 6, close: 15 }, // Sunday
+    1: { open: 6, close: 15 }, // Monday
+    2: { open: 6, close: 15 }, // Tuesday
+    3: { open: 6, close: 15 }, // Wednesday
+    4: { open: 6, close: 15 }, // Thursday
+    5: { open: 6, close: 15 }, // Friday
+    6: null, // Saturday - Closed
+  },
+};
+
+const isBusinessDay = (date) => {
+  // Check if Saturday
+  if (date.getDay() === 6) return false;
+  return true;
+};
+
+const isWithinBusinessHours = (date) => {
+  const day = date.getDay();
+  const hours = BUSINESS_HOURS.weekDays[day];
+  
+  if (!hours) return false; // Closed on this day
+  
+  const hour = date.getHours();
+  return hour >= hours.open && hour < hours.close;
+};
+
+const getNextBusinessDateTime = (fromDate) => {
+  // Start 24 hours from now
+  let nextDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000);
+  
+  // Round up to next hour
+  nextDate.setMinutes(0, 0, 0);
+  if (nextDate.getTime() <= fromDate.getTime() + 24 * 60 * 60 * 1000) {
+    nextDate.setHours(nextDate.getHours() + 1);
+  }
+  
+  // Find next available business hour
+  let attempts = 0;
+  const maxAttempts = 7 * 24; // Search up to a week
+  
+  while (attempts < maxAttempts) {
+    const day = nextDate.getDay();
+    const hours = BUSINESS_HOURS.weekDays[day];
+    const currentHour = nextDate.getHours();
+    
+    // If closed on this day (Saturday), move to next day at opening hour
+    if (!hours) {
+      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setHours(6, 0, 0, 0);
+      attempts++;
+      continue;
+    }
+    
+    // If before opening hours, set to opening hour
+    if (currentHour < hours.open) {
+      nextDate.setHours(hours.open, 0, 0, 0);
+      break;
+    }
+    
+    // If after closing hours, move to next day
+    if (currentHour >= hours.close) {
+      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setHours(6, 0, 0, 0);
+      attempts++;
+      continue;
+    }
+    
+    // Within business hours
+    break;
+  }
+  
+  return nextDate;
+};
+
 const formatDateForInput = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -303,33 +387,107 @@ const getPickupDateTime = (dateValue, timeValue) => {
 
 const updatePickupConstraints = () => {
   if (!pickupDateInput || !pickupTimeInput) return;
-  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  
+  // Get next available business date/time (24 hours + business hours)
+  const minDateTime = getNextBusinessDateTime(new Date());
   const minDate = formatDateForInput(minDateTime);
   pickupDateInput.min = minDate;
 
+  // Check if user selected Saturday
+  if (pickupDateInput.value) {
+    const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
+    const selectedDay = selectedDate.getDay();
+    
+    // Check if Saturday
+    if (selectedDay === 6) {
+      pickupDateInput.value = '';
+      if (checkoutError) {
+        checkoutError.textContent = "ביום שבת אנו סגורים. נא לבחור יום אחר.";
+        checkoutError.classList.remove("hidden");
+        setTimeout(() => checkoutError.classList.add("hidden"), 3000);
+      }
+      return;
+    }
+  }
+
+  // If selected date is the minimum date, restrict time to business hours
   if (pickupDateInput.value === minDate) {
     pickupTimeInput.min = formatTimeForInput(minDateTime);
+    
+    // Get closing time for the selected day
+    const selectedDay = minDateTime.getDay();
+    const hours = BUSINESS_HOURS.weekDays[selectedDay];
+    if (hours) {
+      pickupTimeInput.max = `${String(hours.close).padStart(2, '0')}:00`;
+    }
+  } else if (pickupDateInput.value) {
+    // For other dates, set business hours constraints
+    const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
+    const selectedDay = selectedDate.getDay();
+    const hours = BUSINESS_HOURS.weekDays[selectedDay];
+    
+    if (hours) {
+      pickupTimeInput.min = `${String(hours.open).padStart(2, '0')}:00`;
+      pickupTimeInput.max = `${String(hours.close).padStart(2, '0')}:00`;
+    } else {
+      // Saturday - closed, should not be selectable
+      pickupTimeInput.min = '';
+      pickupTimeInput.max = '';
+    }
   } else {
     pickupTimeInput.removeAttribute("min");
+    pickupTimeInput.removeAttribute("max");
   }
+  
   setPickupValidity();
 };
 
 const setPickupValidity = () => {
   if (!pickupDateInput || !pickupTimeInput) return;
-  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  
   const pickupDateTime = getPickupDateTime(
     pickupDateInput.value,
     pickupTimeInput.value
   );
-  const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות";
-  if (!pickupDateTime || pickupDateTime < minDateTime) {
+  
+  if (!pickupDateTime) {
+    pickupDateInput.setCustomValidity("יש לבחור תאריך ושעה");
+    pickupTimeInput.setCustomValidity("יש לבחור תאריך ושעה");
+    return;
+  }
+  
+  const now = new Date();
+  const minDateTime = getNextBusinessDateTime(now);
+  const day = pickupDateTime.getDay();
+  const hours = BUSINESS_HOURS.weekDays[day];
+  
+  // Check if Saturday (closed)
+  if (!hours) {
+    const message = "ביום שבת אנו סגורים";
     pickupDateInput.setCustomValidity(message);
     pickupTimeInput.setCustomValidity(message);
-  } else {
-    pickupDateInput.setCustomValidity("");
-    pickupTimeInput.setCustomValidity("");
+    return;
   }
+  
+  // Check if 24 hours in advance
+  if (pickupDateTime < minDateTime) {
+    const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות מראש בשעות פעילות";
+    pickupDateInput.setCustomValidity(message);
+    pickupTimeInput.setCustomValidity(message);
+    return;
+  }
+  
+  // Check business hours
+  const hour = pickupDateTime.getHours();
+  if (hour < hours.open || hour >= hours.close) {
+    const message = `שעות פעילות: א׳-ו׳ ${String(hours.open).padStart(2, '0')}:00-${String(hours.close).padStart(2, '0')}:00`;
+    pickupTimeInput.setCustomValidity(message);
+    return;
+  }
+  
+  // Valid
+  pickupDateInput.setCustomValidity("");
+  pickupTimeInput.setCustomValidity("");
 };
 
 const setCustomerFieldValidity = () => {
@@ -772,7 +930,7 @@ const renderAdmin = () => {
     row.innerHTML = `
       <td>${order.order_number ?? ""}</td>
       <td>${order.customer.name}</td>
-      <td>${new Date(order.created_at).toLocaleString("he-IL")}</td>
+      <td>${new Date(order.created_at).toLocaleString("he-IL", { hour12: false })}</td>
       <td class="text-amber-900 font-semibold">${formatCurrency(
         order.total
       )}</td>
@@ -851,11 +1009,25 @@ const setAboutContent = (text) => {
   }
 };
 
+const sanitizeFileName = (text) => {
+  if (!text) return 'file';
+  // Convert to lowercase, replace spaces with dashes, remove non-ASCII/non-alphanumeric
+  const sanitized = text
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  // Fallback if everything was stripped out
+  return sanitized || 'file';
+};
+
 const uploadProductImage = async (file, prefix) => {
   if (!file) return null;
   if (!ensureSupabase()) return null;
   const ext = file.name.split(".").pop();
-  const fileName = `${prefix}-${Date.now()}.${ext}`;
+  const sanitizedPrefix = sanitizeFileName(prefix);
+  const fileName = `${sanitizedPrefix}-${Date.now()}.${ext}`;
   const filePath = `products/${fileName}`;
 
   const { error } = await supabaseClient
@@ -880,7 +1052,8 @@ const uploadCategoryImage = async (file, prefix) => {
   if (!file) return null;
   if (!ensureSupabase()) return null;
   const ext = file.name.split(".").pop();
-  const fileName = `${prefix}-${Date.now()}.${ext}`;
+  const sanitizedPrefix = sanitizeFileName(prefix);
+  const fileName = `${sanitizedPrefix}-${Date.now()}.${ext}`;
   const filePath = `categories/${fileName}`;
 
   const { error } = await supabaseClient
@@ -986,6 +1159,15 @@ const handleCheckout = async (event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
   
+  // Check if orders are being accepted
+  if (!state.ordersAccepting) {
+    if (checkoutError) {
+      checkoutError.textContent = "מצטערים, כרגע איננו מקבלים הזמנות חדשות.";
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
   // Clear any previous error
   if (checkoutError) {
     checkoutError.textContent = "";
@@ -1009,10 +1191,41 @@ const handleCheckout = async (event) => {
   }
 
   const pickupDateTime = getPickupDateTime(payload.date, payload.time);
-  const minDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  if (!pickupDateTime || pickupDateTime < minDateTime) {
+  const minDateTime = getNextBusinessDateTime(new Date());
+  
+  if (!pickupDateTime) {
     if (checkoutError) {
-      checkoutError.textContent = "יש לבחור מועד איסוף לפחות 24 שעות מראש.";
+      checkoutError.textContent = "יש לבחור תאריך ושעה תקינים.";
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
+  // Check if date is Saturday
+  const day = pickupDateTime.getDay();
+  if (day === 6) {
+    if (checkoutError) {
+      checkoutError.textContent = "ביום שבת אנו סגורים.";
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
+  // Check business hours
+  const hours = BUSINESS_HOURS.weekDays[day];
+  const hour = pickupDateTime.getHours();
+  if (!hours || hour < hours.open || hour >= hours.close) {
+    if (checkoutError) {
+      checkoutError.textContent = `שעות פעילות: א׳-ו׳ 06:00-15:00`;
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
+  // Check 24 hour minimum
+  if (pickupDateTime < minDateTime) {
+    if (checkoutError) {
+      checkoutError.textContent = "יש לבחור מועד איסוף לפחות 24 שעות מראש בשעות פעילות.";
       checkoutError.classList.remove("hidden");
     }
     return;
@@ -1387,6 +1600,16 @@ const fetchSiteMeta = async () => {
   state.siteMetaId = data[0].id;
   setAboutContent(data[0].about_section || DEFAULT_ABOUT);
   
+  // Set orders accepting state
+  state.ordersAccepting = data[0].orders_accepting !== false; // Default to true
+  if (ordersAcceptingToggle) {
+    ordersAcceptingToggle.checked = state.ordersAccepting;
+  }
+  if (ordersAcceptingLabel) {
+    ordersAcceptingLabel.textContent = state.ordersAccepting ? 'פתוח' : 'סגור';
+  }
+  updateCheckoutFormVisibility();
+  
   // Update logo if URL exists in database, otherwise ensure default logo is visible
   if (data[0].logo_url) {
     console.log("[fetchSiteMeta] Setting logo from DB:", data[0].logo_url);
@@ -1479,6 +1702,55 @@ const fetchSiteMeta = async () => {
     updateContactAddress(data[0].contact_address);
   }
 
+};
+
+const updateOrdersAccepting = async (accepting) => {
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+  
+  state.ordersAccepting = accepting;
+  
+  if (!state.siteMetaId) {
+    console.error("[updateOrdersAccepting] No site_metadata ID");
+    return;
+  }
+  
+  const { error } = await supabaseClient
+    .from("site_metadata")
+    .update({ orders_accepting: accepting })
+    .eq("id", state.siteMetaId);
+  
+  if (error) {
+    console.error("[updateOrdersAccepting] Error:", error);
+    alert(TECH_SUPPORT_MESSAGE);
+    // Revert toggle
+    if (ordersAcceptingToggle) {
+      ordersAcceptingToggle.checked = !accepting;
+    }
+    state.ordersAccepting = !accepting;
+    return;
+  }
+  
+  console.log("[updateOrdersAccepting] Updated to:", accepting);
+  updateCheckoutFormVisibility();
+};
+
+const updateCheckoutFormVisibility = () => {
+  if (!checkoutForm) return;
+  
+  if (state.ordersAccepting) {
+    checkoutForm.classList.remove('opacity-50', 'pointer-events-none');
+    if (checkoutError) {
+      checkoutError.textContent = "";
+      checkoutError.classList.add("hidden");
+    }
+  } else {
+    checkoutForm.classList.add('opacity-50', 'pointer-events-none');
+    if (checkoutError) {
+      checkoutError.textContent = "מצטערים, כרגע איננו מקבלים הזמנות חדשות.";
+      checkoutError.classList.remove("hidden");
+    }
+  }
 };
 
 const saveAboutContent = async () => {
@@ -2221,7 +2493,8 @@ const showOrderDetails = (order) => {
     <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
     <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
     <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
-      "he-IL"
+      "he-IL",
+      { hour12: false }
     )}</div>
     <div><strong>סכום:</strong> ${formatCurrency(order.total)}</div>
     <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
@@ -2380,18 +2653,54 @@ const handleUpdateCategory = async () => {
     imageUrl = uploadedUrl;
   }
 
-  const { error } = await supabaseClient
+  const updateData = { name, image_url: imageUrl };
+  console.log("[handleUpdateCategory] Attempting update:", {
+    categoryId: state.editingCategoryRowId,
+    updateData: updateData,
+    currentCategory: category
+  });
+
+  const { data, error, count } = await supabaseClient
     .from("categories")
-    .update({ name, image_url: imageUrl })
-    .eq("id", state.editingCategoryRowId);
+    .update(updateData)
+    .eq("id", state.editingCategoryRowId)
+    .select();
+
+  console.log("[handleUpdateCategory] Update response:", { data, error, count, rowsAffected: data?.length });
 
   if (error) {
-    console.error(error);
+    console.error("[handleUpdateCategory] Update failed:", error);
+    console.error("[handleUpdateCategory] Error details:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    
+    // Check for RLS policy error
+    if (error.code === 'PGRST301' || error.message?.includes('policy')) {
+      alert('שגיאת הרשאות: נא לוודא שמדיניות RLS מוגדרת בטבלת categories. ראה את קובץ ההגירה: migrations/001_categories_table_and_policies.sql');
+    } else {
+      alert(TECH_SUPPORT_MESSAGE);
+    }
+    
     if (categoryEditStatus) {
       showTechErrorStatus(categoryEditStatus);
     }
     return;
   }
+
+  if (!data || data.length === 0) {
+    console.error("[handleUpdateCategory] No rows updated! Category ID not found:", state.editingCategoryRowId);
+    alert('שגיאה: הקטגוריה לא נמצאה. ייתכן שהיא נמחקה על ידי משתמש אחר.');
+    if (categoryEditStatus) {
+      categoryEditStatus.textContent = "הקטגוריה לא נמצאה";
+      categoryEditStatus.className = "text-sm mt-2 text-rose-600";
+    }
+    return;
+  }
+
+  console.log("[handleUpdateCategory] Successfully updated category", state.editingCategoryRowId, "New data:", data[0]);
 
   await fetchCategories();
   renderAdmin();
@@ -2484,22 +2793,57 @@ const handleDeleteCategory = async (categoryId) => {
     (item) => String(item.category_id) === String(normalizedId)
   );
   const categoryName = category?.category_name || "";
-  const confirmed = window.confirm(
-    categoryName
-      ? `אתם בטוחים שתרצו למחוק את הקטגוריה "${categoryName}"?`
-      : "למחוק את הקטגוריה?"
-  );
-  if (!confirmed) return;
+  
+  console.log("[handleDeleteCategory] Opening delete confirmation for category:", { id: normalizedId, name: categoryName });
+  
+  // Open confirmation modal instead of using window.confirm
+  openDeleteConfirm('category', normalizedId, categoryName);
+};
 
-  const { error } = await supabaseClient
-    .from("categories")
-    .delete()
-    .eq("id", normalizedId);
-  if (error) {
-    console.error(error);
-    alert(TECH_SUPPORT_MESSAGE);
+const confirmDeleteCategory = async () => {
+  const normalizedId = state.pendingDeleteId;
+  console.log("[confirmDeleteCategory] Confirming deletion for category ID:", normalizedId, "Type:", typeof normalizedId);
+  
+  if (!normalizedId) {
+    console.error("[confirmDeleteCategory] No pending delete ID");
     return;
   }
+  if (!ensureSupabase()) return;
+  if (!ensureAdmin()) return;
+
+  const { data, error, count } = await supabaseClient
+    .from("categories")
+    .delete()
+    .eq("id", normalizedId)
+    .select();
+    
+  console.log("[confirmDeleteCategory] Delete response:", { data, error, count, rowsAffected: data?.length });
+    
+  if (error) {
+    console.error("[confirmDeleteCategory] Delete failed:", error);
+    console.error("[confirmDeleteCategory] Error details:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    
+    // Check for RLS policy error
+    if (error.code === 'PGRST301' || error.message?.includes('policy')) {
+      alert('שגיאת הרשאות: נא לוודא שמדיניות RLS מוגדרת בטבלת categories. ראה את קובץ ההגירה: migrations/001_categories_table_and_policies.sql');
+    } else {
+      alert(TECH_SUPPORT_MESSAGE);
+    }
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    console.error("[confirmDeleteCategory] No rows deleted! Category ID not found:", normalizedId);
+    alert('שגיאה: הקטגוריה לא נמצאה. ייתכן שהיא נמחקה על ידי משתמש אחר.');
+    return;
+  }
+
+  console.log("[confirmDeleteCategory] Successfully deleted category", normalizedId);
 
   await fetchCategories();
   renderAdmin();
@@ -2518,12 +2862,30 @@ const closeOrderModal = () => {
   orderModal.classList.add("hidden");
 };
 
-const openDeleteConfirm = () => {
+const openDeleteConfirm = (type = 'product', id = null, name = '') => {
+  state.pendingDeleteType = type;
+  state.pendingDeleteId = id;
+  
+  const modalTitle = deleteConfirmModal.querySelector('.admin-title');
+  const modalMessage = deleteConfirmModal.querySelector('p');
+  
+  if (type === 'category') {
+    modalTitle.textContent = 'מחיקת קטגוריה';
+    modalMessage.textContent = name 
+      ? `אתם בטוחים שתרצו למחוק את הקטגוריה "${name}"?`
+      : 'למחוק את הקטגוריה?';
+  } else {
+    modalTitle.textContent = 'מחיקת מוצר';
+    modalMessage.textContent = 'האם אתה בטוח שאתה רוצה למחוק את המוצר?';
+  }
+  
   deleteConfirmModal.classList.remove("hidden");
 };
 
 const closeDeleteConfirm = () => {
   deleteConfirmModal.classList.add("hidden");
+  state.pendingDeleteType = null;
+  state.pendingDeleteId = null;
 };
 
 const openNotesPopover = (inputEl) => {
@@ -2794,6 +3156,15 @@ const setupListeners = () => {
   if (adminAboutSave) {
     adminAboutSave.addEventListener("click", saveAboutContent);
   }
+  if (ordersAcceptingToggle) {
+    ordersAcceptingToggle.addEventListener("change", (e) => {
+      const accepting = e.target.checked;
+      if (ordersAcceptingLabel) {
+        ordersAcceptingLabel.textContent = accepting ? 'פתוח' : 'סגור';
+      }
+      updateOrdersAccepting(accepting);
+    });
+  }
   if (adminHeaderTitleSave) {
     adminHeaderTitleSave.addEventListener("click", saveHeaderTitle);
   }
@@ -2863,8 +3234,12 @@ const setupListeners = () => {
 
   deleteConfirmClose.addEventListener("click", closeDeleteConfirm);
   deleteConfirmNo.addEventListener("click", closeDeleteConfirm);
-  deleteConfirmYes.addEventListener("click", () => {
-    if (state.editingProductId) {
+  deleteConfirmYes.addEventListener("click", async () => {
+    console.log("[deleteConfirmYes] Clicked. Pending delete:", { type: state.pendingDeleteType, id: state.pendingDeleteId });
+    
+    if (state.pendingDeleteType === 'category' && state.pendingDeleteId) {
+      await confirmDeleteCategory();
+    } else if (state.editingProductId) {
       handleDeleteProduct(state.editingProductId);
     }
     closeDeleteConfirm();

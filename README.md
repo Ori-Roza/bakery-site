@@ -27,6 +27,13 @@
 
 צרו טבלאות עם השדות הבאים:
 
+**categories**
+
+- id (bigint, primary key, generated always as identity)
+- name (text, not null)
+- image_url (text)
+- created_at (timestamptz, default now())
+
 **products**
 
 - id (text, primary key)
@@ -53,12 +60,13 @@
 
 לצורך פשטות MVP:
 
+- אפשרו SELECT ל־categories לכלל הציבור.
 - אפשרו SELECT ל־products לכלל הציבור.
 - אפשרו INSERT ל־orders לכלל הציבור.
+- UPDATE/DELETE/INSERT ל־categories רק למשתמשים עם role = admin.
 - UPDATE/DELETE ל־products רק למשתמשים עם role = admin.
 - SELECT ל־profiles רק למשתמש עצמו (user_id = auth.uid()).
 
-> ניתן להגדיר Policies בהתאם לתצורת האבטחה הרצויה.
 
 ### 4) קונפיג מקומי
 
