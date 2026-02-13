@@ -289,6 +289,12 @@ img {
   }
 }
 
+@media (min-width: 641px) {
+  .primary-button {
+    width: auto;
+  }
+}
+
 @media (max-width: 640px) {
   .primary-button {
     padding: 0.875rem 1.25rem;
@@ -503,8 +509,8 @@ select.form-input {
   top: 0;
   left: 0;
   width: min(100%, 380px);
-  height: 100dvh;
-  height: 100vh; /* Fallback for browsers that don't support dvh */
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh; /* Modern browsers: accounts for iOS Safari URL bar */
   background: white;
   transform: translateX(-105%);
   transition: transform 0.3s ease;
@@ -589,6 +595,7 @@ select.form-input {
 .cart-footer {
   border-top: 1px solid #f1e4d6;
   padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   display: grid;
   gap: 1rem;
 }

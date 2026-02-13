@@ -1048,10 +1048,9 @@ const openCart = () => {
   cartDrawer.classList.add("open");
   overlay.classList.remove("hidden");
   // Prevent body scroll on mobile when cart is open
+  // Avoid position:fixed on body — it breaks fixed children and scroll on iOS Safari
   document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
-  document.body.style.position = "fixed";
-  document.body.style.width = "100%";
 };
 
 const closeCart = () => {
@@ -1060,8 +1059,6 @@ const closeCart = () => {
   // Re-enable body scroll
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
-  document.body.style.position = "";
-  document.body.style.width = "";
 };
 
 const addToCart = (id) => {
