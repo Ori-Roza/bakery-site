@@ -315,10 +315,10 @@ const isWithinBusinessHours = (date) => {
 };
 
 const getNextBusinessDateTime = (fromDate) => {
-  // Start from today at midnight
-  let nextDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0, 0);
+  // Start from 24 hours from the given date/time
+  let nextDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000);
   
-  // Find next available business day starting from today
+  // Find next available business day starting from 24 hours from now
   let attempts = 0;
   const maxAttempts = 7; // Search up to a week
   
@@ -329,13 +329,15 @@ const getNextBusinessDateTime = (fromDate) => {
     // If closed on this day (Saturday), move to next day
     if (!hours) {
       nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(0, 0, 0, 0);
+      nextDate.setHours(6, 0, 0, 0); // Reset to opening hour
       attempts++;
       continue;
     }
     
-    // Found an open day, set to opening hour
-    nextDate.setHours(hours.open, 0, 0, 0);
+    // Found an open day, ensure we're at opening hour or later
+    if (nextDate.getHours() < hours.open) {
+      nextDate.setHours(hours.open, 0, 0, 0);
+    }
     break;
   }
   
@@ -1046,14 +1048,20 @@ const openCart = () => {
   cartDrawer.classList.add("open");
   overlay.classList.remove("hidden");
   // Prevent body scroll on mobile when cart is open
+  document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
 };
 
 const closeCart = () => {
   cartDrawer.classList.remove("open");
   overlay.classList.add("hidden");
   // Re-enable body scroll
+  document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
+  document.body.style.position = "";
+  document.body.style.width = "";
 };
 
 const addToCart = (id) => {

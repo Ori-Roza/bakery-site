@@ -503,7 +503,8 @@ select.form-input {
   top: 0;
   left: 0;
   width: min(100%, 380px);
-  height: 100vh;
+  height: 100dvh;
+  height: 100vh; /* Fallback for browsers that don't support dvh */
   background: white;
   transform: translateX(-105%);
   transition: transform 0.3s ease;
@@ -512,6 +513,9 @@ select.form-input {
   flex-direction: column;
   box-shadow: 20px 0 40px -20px rgba(145, 70, 30, 0.35);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 @media (max-width: 640px) {
