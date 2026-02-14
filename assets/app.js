@@ -1,4 +1,4 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+let supabaseClient = null;
 
 const CONTACT_PHONE = "050-123-4567";
 const CONTACT_PHONE_INTL = "972501234567";
@@ -9,11 +9,31 @@ const TECH_SUPPORT_MESSAGE = "אירעה שגיאה, נא פנו לחנות";
 const CUSTOMER_NAME_REQUIRED = "נא להזין שם מלא";
 const CUSTOMER_PHONE_REQUIRED = "נא להזין מספר טלפון";
 
-const SUPABASE_CONFIG = window.__SUPABASE__ || {};
-const supabaseClient =
-  SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey
-    ? createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
-    : null;
+const SUPABASE_CONFIG =
+  typeof window !== "undefined" && window.__SUPABASE__
+    ? window.__SUPABASE__
+    : {};
+
+const getInjectedSupabaseClient = () => {
+  if (typeof window === "undefined") return null;
+  if (window.__SUPABASE_CLIENT__) return window.__SUPABASE_CLIENT__;
+  if (window.__SUPABASE_FACTORY__) {
+    return window.__SUPABASE_FACTORY__(SUPABASE_CONFIG);
+  }
+  return null;
+};
+
+const createSupabaseClient = async () => {
+  const injected = getInjectedSupabaseClient();
+  if (injected) return injected;
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
+    return null;
+  }
+  const { createClient } = await import(
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+  );
+  return createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+};
 
 const state = {
   products: [],
@@ -3317,6 +3337,7 @@ const setupListeners = () => {
 
 const init = async () => {
   console.log("[init] Starting initialization...");
+  supabaseClient = await createSupabaseClient();
   setupListeners();
   updateRoute();
   updatePickupConstraints();
@@ -3380,4 +3401,23 @@ const init = async () => {
   }
 };
 
-init();
+const shouldAutoInit =
+  typeof window !== "undefined" && !window.__DISABLE_AUTO_INIT__;
+
+if (shouldAutoInit) {
+  init();
+}
+
+export { init };
+
+export const __test__ = {
+  state,
+  mapDbToProduct,
+  mapProductToDb,
+  normalizeCategoryId,
+  normalizeProductId,
+  getNextBusinessDateTime,
+  getPickupDateTime,
+  buildOrderMessage,
+  buildOrderLinks,
+};
