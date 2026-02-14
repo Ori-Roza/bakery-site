@@ -14,6 +14,7 @@
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
     "jsdom": "^24.0.0",
     "sql.js": "^1.13.0",
