@@ -1,71 +1,48 @@
+import { formatCurrency, formatDateForInput, formatTimeForInput } from './utils/formatters';
+import { bufferToHex, hexToBase64, sanitizeFileName } from './utils/data-converters';
+import { 
+  BUSINESS_HOURS,
+  isBusinessDay, 
+  isWithinBusinessHours, 
+  getNextBusinessDateTime,
+  getPickupDateTime 
+} from './utils/business-hours';
+import {
+  CONTACT_PHONE,
+  CONTACT_PHONE_INTL,
+  CONTACT_EMAIL,
+  DEFAULT_WHATSAPP_PHONE,
+  DEFAULT_ORDER_EMAIL,
+  TECH_SUPPORT_MESSAGE,
+  CUSTOMER_NAME_REQUIRED,
+  CUSTOMER_PHONE_REQUIRED,
+  DEFAULT_ABOUT
+} from './config/constants';
+import type { AppState, Product, Category, Order, OrderMessageParams, OrderLinks, CartItem } from './types/models';
+import { store, getState } from './store/state';
+import * as actions from './store/actions';
+import { ProductMapper } from './models/ProductMapper';
+import { CategoryMapper } from './models/CategoryMapper';
+import { OrderMapper } from './models/OrderMapper';
+import { createSupabaseClient, getInjectedSupabaseClient } from './services/SupabaseClient';
+import { StorageService } from './services/StorageService';
+import { ProductService } from './services/ProductService';
+
 let supabaseClient = null;
+let storageService: StorageService | null = null;
+let productService: ProductService | null = null;
 
-const CONTACT_PHONE = "050-123-4567";
-const CONTACT_PHONE_INTL = "972501234567";
-const CONTACT_EMAIL = "ori.roza@bluevine.com";
-const DEFAULT_WHATSAPP_PHONE = CONTACT_PHONE_INTL;
-const DEFAULT_ORDER_EMAIL = CONTACT_EMAIL;
-const TECH_SUPPORT_MESSAGE = "אירעה שגיאה, נא פנו לחנות";
-const CUSTOMER_NAME_REQUIRED = "נא להזין שם מלא";
-const CUSTOMER_PHONE_REQUIRED = "נא להזין מספר טלפון";
-
-const SUPABASE_CONFIG =
-  typeof window !== "undefined" && window.__SUPABASE__
-    ? window.__SUPABASE__
-    : {};
-
-const getInjectedSupabaseClient = () => {
-  if (typeof window === "undefined") return null;
-  if (window.__SUPABASE_CLIENT__) return window.__SUPABASE_CLIENT__;
-  if (window.__SUPABASE_FACTORY__) {
-    return window.__SUPABASE_FACTORY__(SUPABASE_CONFIG);
+// Use store-managed state (backward compatible access pattern)
+// Direct mutations still work, but actions are preferred for new code
+const state = new Proxy({} as AppState, {
+  get(target, prop) {
+    return getState()[prop as keyof AppState];
+  },
+  set(target, prop, value) {
+    store.setState({ [prop]: value } as any);
+    return true;
   }
-  return null;
-};
-
-const createSupabaseClient = async () => {
-  const injected = getInjectedSupabaseClient();
-  if (injected) return injected;
-  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
-    return null;
-  }
-  const { createClient } = await import(
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
-  );
-  return createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-};
-
-const state = {
-  products: [],
-  cart: {},
-  orders: [],
-  session: null,
-  role: null,
-  editingProductId: null,
-  sortProducts: { key: "title", dir: "asc" },
-  sortOrders: { key: "created_at", dir: "desc" },
-  categories: [],
-  editingCategoryId: null,
-  creatingCategoryId: null,
-  siteMetaId: null,
-  featuredProducts: [],
-  featuredProductIds: [],
-  heroChips: [],
-  heroImageUrl: "",
-  heroBadge: "",
-  heroTitle: "",
-  heroDescription: "",
-  activeCategoryId: null,
-  checkoutWhatsappPhone: DEFAULT_WHATSAPP_PHONE,
-  pendingDeleteType: null,
-  pendingDeleteId: null,
-  checkoutEmail: DEFAULT_ORDER_EMAIL,
-  storePhone: CONTACT_PHONE,
-  bakeryPhone: CONTACT_PHONE,
-  pendingOrderLinks: null,
-  editingCategoryRowId: null,
-  ordersAccepting: true,
-};
+});
 
 const categoryTrackEl = document.getElementById("category-track");
 const productsScrollEl = document.getElementById("products-scroll");
@@ -212,179 +189,36 @@ document.body.appendChild(notesPopover);
 const notesTextarea = notesPopover.querySelector(".notes-textarea");
 let activeNotesInput = null;
 
-const formatCurrency = (value) => `₪${Number(value).toFixed(2)}`;
-const DEFAULT_ABOUT =
-  "בית מאפה ברכת יעקב הוא מאפייה משפחתית עם אהבה לבצק, לחום של התנור ולטעמים של בית. אנו אופים מדי יום חלות, לחמים ומאפים טריים מחומרי גלם איכותיים, עם הקפדה על טריות, שירות אישי וחוויה נעימה לכל המשפחה.\n\nהמטרה שלנו היא לשלב בין מסורת לאיכות מודרנית — כדי שתוכלו ליהנות מארוחה חמה, שולחן שבת עשיר ורגעים מתוקים לאורך השבוע.";
-
-const mapDbToProduct = (row) => ({
-  id: row.id,
-  title: row.title,
-  price: Number(row.price),
-  discountPercentage: Number(row.discount_percentage) || 0,
-  categoryId: row.category_id || row.categoryId || row.category_id,
-  categoryName: row.categories?.name || row.category || "",
-  image: row.image,
-  inStock: row.in_stock,
-});
+// Data mapping functions (use mapper classes)
+const mapDbToProduct = (row) => ProductMapper.mapDbToProduct(row);
 
 const mapProductToDb = (product, { includeId = false } = {}) => {
-  const payload = {
-    title: product.title,
-    price: product.price,
-    discount_percentage: product.discountPercentage || 0,
-    category_id: normalizeCategoryId(
-      product.categoryId || product.category_id || null
-    ),
-    image: product.image,
-    in_stock: product.inStock,
-  };
-  if (includeId) {
-    const numericId = Number(product.id);
-    if (Number.isFinite(numericId)) {
-      payload.id = numericId;
-    }
-  }
-  return payload;
+  return ProductMapper.mapProductToDb(product, {
+    includeId,
+    normalizeCategoryId: (value) => CategoryMapper.normalizeCategoryId(value, state.categories)
+  });
 };
 
 const getCategoryLabel = (product) => {
-  if (product.categoryName || product.category) {
-    return product.categoryName || product.category || "";
-  }
-  const category = state.categories.find(
-    (item) => String(item.category_id) === String(product.categoryId)
-  );
-  return category?.category_name || "";
+  return ProductMapper.getCategoryLabel(product, state.categories);
 };
 
 const normalizeCategoryId = (value) => {
-  console.log("[normalizeCategoryId] Input:", value, "Type:", typeof value);
-  if (value === null || value === undefined || value === "") {
-    console.log("[normalizeCategoryId] Value is null/undefined/empty, returning null");
-    return null;
-  }
-  const asNumber = Number(value);
-  if (Number.isFinite(asNumber)) {
-    console.log("[normalizeCategoryId] Converted to number:", asNumber);
-    return asNumber;
-  }
-  const match = state.categories.find((item) => item.category_name === value);
-  console.log("[normalizeCategoryId] Looked up by name, found:", match);
-  return match ? match.category_id : null;
+  return CategoryMapper.normalizeCategoryId(value, state.categories);
 };
 
 const normalizeProductId = (value) => {
-  const asNumber = Number(value);
-  return Number.isFinite(asNumber) ? asNumber : null;
+  return CategoryMapper.normalizeProductId(value);
+};
+
+const getCategoryThumbnail = (categoryId) => {
+  return CategoryMapper.getCategoryThumbnail(categoryId, state.categories);
 };
 
 const showTechErrorStatus = (element) => {
   if (!element) return;
   element.textContent = TECH_SUPPORT_MESSAGE;
   element.className = "text-sm mt-2 text-rose-600";
-};
-
-const bufferToHex = (buffer) => {
-  const bytes = new Uint8Array(buffer);
-  let hex = "";
-  bytes.forEach((byte) => {
-    hex += byte.toString(16).padStart(2, "0");
-  });
-  return hex;
-};
-
-const hexToBase64 = (hexValue) => {
-  if (!hexValue) return "";
-  const hex = hexValue.startsWith("\\x") ? hexValue.slice(2) : hexValue;
-  let binary = "";
-  for (let i = 0; i < hex.length; i += 2) {
-    binary += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
-  }
-  return btoa(binary);
-};
-
-// Business hours configuration
-const BUSINESS_HOURS = {
-  // Sunday (0) through Friday (5): 06:00-15:00
-  // Saturday (6): Closed
-  weekDays: {
-    0: { open: 6, close: 15 }, // Sunday
-    1: { open: 6, close: 15 }, // Monday
-    2: { open: 6, close: 15 }, // Tuesday
-    3: { open: 6, close: 15 }, // Wednesday
-    4: { open: 6, close: 15 }, // Thursday
-    5: { open: 6, close: 15 }, // Friday
-    6: null, // Saturday - Closed
-  },
-};
-
-const isBusinessDay = (date) => {
-  // Check if Saturday
-  if (date.getDay() === 6) return false;
-  return true;
-};
-
-const isWithinBusinessHours = (date) => {
-  const day = date.getDay();
-  const hours = BUSINESS_HOURS.weekDays[day];
-  
-  if (!hours) return false; // Closed on this day
-  
-  const hour = date.getHours();
-  return hour >= hours.open && hour < hours.close;
-};
-
-const getNextBusinessDateTime = (fromDate) => {
-  // Start from 24 hours from the given date/time
-  let nextDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000);
-  
-  // Find next available business day starting from 24 hours from now
-  let attempts = 0;
-  const maxAttempts = 7; // Search up to a week
-  
-  while (attempts < maxAttempts) {
-    const day = nextDate.getDay();
-    const hours = BUSINESS_HOURS.weekDays[day];
-    
-    // If closed on this day (Saturday), move to next day
-    if (!hours) {
-      nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(6, 0, 0, 0); // Reset to opening hour
-      attempts++;
-      continue;
-    }
-    
-    // Found an open day, ensure we're at opening hour or later
-    if (nextDate.getHours() < hours.open) {
-      nextDate.setHours(hours.open, 0, 0, 0);
-    }
-    break;
-  }
-  
-  return nextDate;
-};
-
-const formatDateForInput = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const formatTimeForInput = (date) => {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-};
-
-const getPickupDateTime = (dateValue, timeValue) => {
-  if (!dateValue || !timeValue) return null;
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const [hours, minutes] = timeValue.split(":").map(Number);
-  if (!year || !month || !day || Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return null;
-  }
-  return new Date(year, month - 1, day, hours, minutes, 0, 0);
 };
 
 const updatePickupConstraints = () => {
@@ -501,19 +335,6 @@ const setActiveCategory = (categoryId) => {
   if (productsSection) {
     productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-};
-
-const getCategoryThumbnail = (categoryId) => {
-  if (!categoryId) {
-    return "assets/all_categories.png";
-  }
-  const category = state.categories.find(
-    (item) => String(item.category_id) === String(categoryId)
-  );
-  if (category?.image_url) {
-    return category.image_url;
-  }
-  return "assets/all_categories.png";
 };
 
 const renderCategoryCarousel = () => {
@@ -686,16 +507,6 @@ const getCartTotals = () => {
   return { items, totalQty, totalPrice };
 };
 
-const pickRandomProducts = (items, count = 5) => {
-  const inStockItems = items.filter(item => item.inStock);
-  const pool = [...inStockItems];
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, count);
-};
-
 const updateCartUI = () => {
   const { items, totalQty, totalPrice } = getCartTotals();
   cartItemsEl.innerHTML = "";
@@ -793,7 +604,6 @@ const renderAdmin = () => {
   adminProductsEl.innerHTML = "";
   const query = adminSearchInput?.value?.trim().toLowerCase() || "";
   const filteredProducts = state.products.filter((product) => {
-    if (!query) return true;
     return (
       product.title.toLowerCase().includes(query) ||
       getCategoryLabel(product).toLowerCase().includes(query)
@@ -1018,55 +828,15 @@ const sanitizeFileName = (text) => {
 
 const uploadProductImage = async (file, prefix) => {
   if (!file) return null;
-  if (!ensureSupabase()) return null;
-  const ext = file.name.split(".").pop();
-  const sanitizedPrefix = sanitizeFileName(prefix);
-  const fileName = `${sanitizedPrefix}-${Date.now()}.${ext}`;
-  const filePath = `products/${fileName}`;
-
-  const { error } = await supabaseClient
-    .storage
-    .from("product-images")
-    .upload(filePath, file, { upsert: true });
-
-  if (error) {
-    console.error(error);
-    alert(TECH_SUPPORT_MESSAGE);
-    return null;
-  }
-
-  const { data } = supabaseClient.storage
-    .from("product-images")
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
+  if (!ensureSupabase() || !storageService) return null;
+  return await storageService.uploadProductImage(file, prefix);
 };
 
 const uploadCategoryImage = async (file, prefix) => {
   if (!file) return null;
-  if (!ensureSupabase()) return null;
-  const ext = file.name.split(".").pop();
-  const sanitizedPrefix = sanitizeFileName(prefix);
-  const fileName = `${sanitizedPrefix}-${Date.now()}.${ext}`;
-  const filePath = `categories/${fileName}`;
-
-  const { error } = await supabaseClient
-    .storage
-    .from("product-images")
-    .upload(filePath, file, { upsert: true });
-
-  if (error) {
-    console.error(error);
-    return null;
-  }
-
-  const { data } = supabaseClient.storage
-    .from("product-images")
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
+  if (!ensureSupabase() || !storageService) return null;
+  return await storageService.uploadCategoryImage(file, prefix);
 };
-
 
 const openCart = () => {
   cartDrawer.classList.add("open");
@@ -1114,26 +884,16 @@ const setQty = (id, value) => {
   updateCartUI();
 };
 
-const buildOrderMessage = ({ name, phone, date, time, items, totalPrice }) => {
-  const lines = items.map((item) => `${item.title} x ${item.qty}`).join("\n");
-  return (
-    `שלום יעקב, הזמנה חדשה מהאתר:\n${lines}` +
-    `\nסה"כ לתשלום: ₪${totalPrice}` +
-    `\nשם הלקוח: ${name}` +
-    `\nטלפון: ${phone}` +
-    `\nמועד איסוף: ${date} בשעה ${time}`
-  );
+// Order mapping functions (use OrderMapper class)
+const buildOrderMessage = (params: OrderMessageParams) => {
+  return OrderMapper.buildOrderMessage(params);
 };
 
 const buildOrderLinks = (message) => {
-  const whatsappPhone = state.checkoutWhatsappPhone || DEFAULT_WHATSAPP_PHONE;
-  const email = state.checkoutEmail || DEFAULT_ORDER_EMAIL;
-  return {
-    whatsappUrl: `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`,
-    emailUrl: `mailto:${email}?subject=${encodeURIComponent(
-      "הזמנה חדשה מהאתר"
-    )}&body=${encodeURIComponent(message)}`,
-  };
+  return OrderMapper.buildOrderLinks(message, {
+    whatsappPhone: state.checkoutWhatsappPhone,
+    email: state.checkoutEmail
+  });
 };
 
 const openOrderChannelModal = (links) => {
@@ -3342,6 +3102,13 @@ const setupListeners = () => {
 const init = async () => {
   console.log("[init] Starting initialization...");
   supabaseClient = await createSupabaseClient();
+  
+  // Initialize services if client is available
+  if (supabaseClient) {
+    storageService = new StorageService(supabaseClient);
+    productService = new ProductService(supabaseClient);
+  }
+  
   setupListeners();
   updateRoute();
   updatePickupConstraints();
@@ -3416,6 +3183,8 @@ export { init };
 
 export const __test__ = {
   state,
+  store,
+  actions,
   mapDbToProduct,
   mapProductToDb,
   normalizeCategoryId,

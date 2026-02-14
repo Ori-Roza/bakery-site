@@ -4,7 +4,7 @@ export const loadAppWithClient = async (client) => {
   vi.resetModules();
   window.__DISABLE_AUTO_INIT__ = true;
   window.__SUPABASE_CLIENT__ = client;
-  const app = await import("../../assets/app.js");
+  const app = await import("../../assets/app.ts");
   await app.init();
   return app;
 };
