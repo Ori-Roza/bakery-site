@@ -3,25 +3,29 @@ import { createSqliteSupabaseClient } from "./helpers/sqliteSupabaseMock.js";
 import { loadAppWithClient, flushPromises } from "./helpers/loadApp.js";
 
 const setValidCheckout = (app) => {
-  const next = app.__test__.getNextBusinessDateTime(new Date());
-  if (next.getDay() === 6) {
-    next.setDate(next.getDate() + 1);
+  // Set date to 3 days from now at 10:00 AM (definitely valid)
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 3);
+  futureDate.setHours(10, 0, 0, 0);
+  // If it's Saturday, move to Sunday
+  if (futureDate.getDay() === 6) {
+    futureDate.setDate(futureDate.getDate() + 1);
   }
-  // Round up to next hour to ensure pickup time is after minimum
-  // If we have minutes/seconds, add an hour
-  if (next.getMinutes() > 0 || next.getSeconds() > 0) {
-    next.setHours(next.getHours() + 1);
-  }
-  next.setMinutes(0, 0, 0);
-  const yyyy = next.getFullYear();
-  const mm = String(next.getMonth() + 1).padStart(2, "0");
-  const dd = String(next.getDate()).padStart(2, "0");
-  const hh = String(next.getHours()).padStart(2, "0");
+  const yyyy = futureDate.getFullYear();
+  const mm = String(futureDate.getMonth() + 1).padStart(2, "0");
+  const dd = String(futureDate.getDate()).padStart(2, "0");
 
   document.getElementById("customer-name").value = "בדיקה";
   document.getElementById("customer-phone").value = "0503333333";
   document.getElementById("pickup-date").value = `${yyyy}-${mm}-${dd}`;
-  document.getElementById("pickup-time").value = `${hh}:00`;
+  document.getElementById("pickup-time").value = "10:00";
+
+  // Trigger change events to update validation
+  document.getElementById("pickup-date").dispatchEvent(new Event("change", { bubbles: true }));
+  document.getElementById("pickup-time").dispatchEvent(new Event("change", { bubbles: true }));
+  // Also trigger blur to ensure validation is finalized
+  document.getElementById("pickup-date").dispatchEvent(new Event("blur", { bubbles: true }));
+  document.getElementById("pickup-time").dispatchEvent(new Event("blur", { bubbles: true }));
 };
 
 describe("order channel modal", () => {
