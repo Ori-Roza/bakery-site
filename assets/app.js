@@ -2074,7 +2074,7 @@ const saveHero = async () => {
     adminHeroStatus.className = "text-sm mt-2 text-stone-500";
   }
   
-  const badge = adminHeroBadgeInput.value.trim();
+  const badge = adminHeroBadgeInput ? adminHeroBadgeInput.value.trim() : "";
   const title = adminHeroTitleInput.value.trim();
   const description = adminHeroDescriptionInput.value.trim();
   const imageUrl = state.heroImageUrl;
@@ -2093,13 +2093,16 @@ const saveHero = async () => {
     return;
   }
 
-  const payload = { 
-    hero_badge: badge,
+  const payload = {
     hero_title: title,
     hero_description: description,
     hero_chips: chips,
-    hero_image_url: imageUrl
+    hero_image_url: imageUrl,
   };
+
+  if (adminHeroBadgeInput) {
+    payload.hero_badge = badge;
+  }
   
   let error;
   if (state.siteMetaId) {
@@ -2120,9 +2123,11 @@ const saveHero = async () => {
   }
 
   // Update the hero elements on page immediately
-  const heroBadge = document.getElementById("hero-badge");
-  if (heroBadge && badge) {
-    heroBadge.textContent = badge;
+  if (adminHeroBadgeInput) {
+    const heroBadge = document.getElementById("hero-badge");
+    if (heroBadge && badge) {
+      heroBadge.textContent = badge;
+    }
   }
   
   const heroTitle = document.querySelector("#hero h2");
