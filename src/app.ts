@@ -172,9 +172,6 @@ const adminHeroImageFile = document.getElementById("admin-hero-image-file") as H
 const adminHeroImagePreview = document.getElementById("admin-hero-image-preview") as HTMLImageElement | null;
 const adminHeroSave = document.getElementById("admin-hero-save") as HTMLElement | null;
 const adminHeroStatus = document.getElementById("admin-hero-status") as HTMLElement | null;
-const adminFeaturedProductsContainer = document.getElementById("admin-featured-products") as HTMLElement | null;
-const adminFeaturedSave = document.getElementById("admin-featured-save") as HTMLElement | null;
-const adminFeaturedStatus = document.getElementById("admin-featured-status") as HTMLElement | null;
 const adminContactBakeryPhoneInput = document.getElementById("admin-contact-bakery-phone") as HTMLInputElement | null;
 const adminContactStorePhoneInput = document.getElementById("admin-contact-store-phone") as HTMLInputElement | null;
 const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp") as HTMLInputElement | null;
@@ -1881,94 +1878,6 @@ const renderHeroChipsDisplay = () => {
   }
 };
 
-const renderFeaturedProductsCheckboxes = () => {
-  if (!adminFeaturedProductsContainer) return;
-  adminFeaturedProductsContainer.innerHTML = "";
-  
-  // Only show in-stock products
-  const inStockProducts = state.products.filter((p) => p.inStock);
-  
-  inStockProducts.forEach((product) => {
-    const productId = typeof product.id === 'string' ? parseInt(product.id) : product.id;
-    const isChecked = state.featuredProductIds && state.featuredProductIds.includes(productId);
-    const label = document.createElement("label");
-    label.className = "flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer";
-    label.innerHTML = `
-      <input type="checkbox" value="${product.id}" class="featured-product-checkbox" ${isChecked ? 'checked' : ''} />
-      <span class="text-sm">${product.title}</span>
-    `;
-    adminFeaturedProductsContainer.appendChild(label);
-  });
-};
-
-const saveFeaturedProducts = async () => {
-  if (!ensureSupabase()) return;
-  if (!ensureAdmin()) return;
-  if (adminFeaturedStatus) {
-    adminFeaturedStatus.textContent = "שומר...";
-    adminFeaturedStatus.className = "text-sm mt-2 text-stone-500";
-  }
-  
-  const checkboxes = document.querySelectorAll(".featured-product-checkbox");
-  const selectedIds = Array.from(checkboxes)
-    .filter((cb) => (cb as HTMLInputElement).checked)
-    .map((cb) => Number((cb as HTMLInputElement).value));
-  
-  if (selectedIds.length === 0) {
-    alert("בחרו לפחות מוצר אחד.");
-    if (adminFeaturedStatus) {
-      adminFeaturedStatus.textContent = "שגיאה: בחרו לפחות מוצר אחד.";
-      adminFeaturedStatus.className = "text-sm mt-2 text-rose-600";
-    }
-    return;
-  }
-
-  // Delete all existing featured products
-  const { error: deleteError } = await supabaseClient
-    .from("featured_products")
-    .delete()
-    .eq("site_metadata_id", state.siteMetaId);
-
-  if (deleteError) {
-    console.error(deleteError);
-    if (adminFeaturedStatus) {
-      showTechErrorStatus(adminFeaturedStatus);
-    }
-    return;
-  }
-
-  // Insert new featured products
-  const payload = selectedIds.map((productId) => ({
-    product_id: productId,
-    site_metadata_id: state.siteMetaId,
-  }));
-
-  const { error } = await supabaseClient
-    .from("featured_products")
-    .insert(payload);
-
-  if (error) {
-    console.error(error);
-    if (adminFeaturedStatus) {
-      showTechErrorStatus(adminFeaturedStatus);
-    }
-    return;
-  }
-
-  state.featuredProductIds = selectedIds;
-  // Update featured products array and re-render (filter out-of-stock)
-  state.featuredProducts = state.products.filter((p) => {
-    const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id;
-    return selectedIds.includes(productId) && p.inStock;
-  });
-  renderProducts();
-  
-  if (adminFeaturedStatus) {
-    adminFeaturedStatus.textContent = "נשמר בהצלחה ✓";
-    adminFeaturedStatus.className = "text-sm mt-2 text-green-600";
-  }
-};
-
 const saveContactInfo = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
@@ -2076,7 +1985,6 @@ const _fetchFeaturedProducts = async () => {
   }
 
   state.featuredProductIds = (data || []).map((item: any) => item.product_id);
-  renderFeaturedProductsCheckboxes();
 };
 
 const fetchOrders = async () => {
@@ -2130,7 +2038,6 @@ const openAdminIfSession = async () => {
     adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
     await fetchOrders();
     renderAdmin();
-    renderFeaturedProductsCheckboxes();
   }
 };
 
@@ -2866,9 +2773,6 @@ const setupListeners = () => {
       state.heroChips.push("");
       renderHeroChipsAdmin();
     });
-  }
-  if (adminFeaturedSave) {
-    adminFeaturedSave.addEventListener("click", saveFeaturedProducts);
   }
   if (adminContactSave) {
     adminContactSave.addEventListener("click", saveContactInfo);
