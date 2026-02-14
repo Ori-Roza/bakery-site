@@ -540,7 +540,11 @@ const renderCategoryCarousel = () => {
   allCard.addEventListener("click", () => setActiveCategory(null));
   categoryTrackEl.appendChild(allCard);
 
-  state.categories.forEach((category) => {
+  const sortedCategories = [...state.categories].sort((a, b) =>
+    a.category_name.localeCompare(b.category_name, "he")
+  );
+
+  sortedCategories.forEach((category) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "carousel-card category-card";
