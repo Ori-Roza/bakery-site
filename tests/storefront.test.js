@@ -51,21 +51,39 @@ describe("storefront", () => {
     const timeInput = document.getElementById("pickup-time");
     const form = document.getElementById("checkout-form");
 
-    const nextSlot = pickNextBusinessSlot(app);
+    // Set date to 3 days from now at 10:00 AM (definitely valid)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 3);
+    futureDate.setHours(10, 0, 0, 0);
+    // If it's Saturday, move to Sunday
+    if (futureDate.getDay() === 6) {
+      futureDate.setDate(futureDate.getDate() + 1);
+    }
+    const yyyy = futureDate.getFullYear();
+    const mm = String(futureDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(futureDate.getDate()).padStart(2, "0");
 
     nameInput.value = "לקוח בדיקה";
     phoneInput.value = "0501234567";
-    dateInput.value = nextSlot.date;
-    timeInput.value = nextSlot.time;
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    timeInput.value = "10:00";
+
+    // Trigger change events to update validation
+    dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+    timeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    // Also trigger blur to ensure validation is finalized
+    dateInput.dispatchEvent(new Event("blur", { bubbles: true }));
+    timeInput.dispatchEvent(new Event("blur", { bubbles: true }));
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
     await flushPromises();
 
-    const orderModal = document.getElementById("order-channel-modal");
-    expect(orderModal.classList.contains("hidden")).toBe(false);
-
+    // Check if order was inserted first
     const row = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
     expect(row.count).toBe(1);
+
+    const orderModal = document.getElementById("order-channel-modal");
+    expect(orderModal.classList.contains("hidden")).toBe(false);
   });
 });

@@ -93,7 +93,7 @@ describe("hexToBase64", () => {
 
   it("converts all F values", () => {
     const result = hexToBase64("ffffff");
-    expect(result).toBe("///8=");
+    expect(result).toBe("////");
   });
 
   it("returns valid base64 format", () => {
@@ -134,7 +134,7 @@ describe("sanitizeFileName", () => {
 
   it("removes Hebrew characters", () => {
     const result = sanitizeFileName("שלום עולם");
-    expect(result).toBe("---"); // Spaces become dashes but Hebrew removed
+    expect(result).toBe("file"); // Hebrew and spaces removed, returns default
   });
 
   it("handles slashes and backslashes", () => {

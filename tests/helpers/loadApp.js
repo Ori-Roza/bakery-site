@@ -9,4 +9,23 @@ export const loadAppWithClient = async (client) => {
   return app;
 };
 
-export const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+export const flushPromises = () => 
+  new Promise((resolve) => {
+    // Use microtask queue (Promise)
+    Promise.resolve().then(() => {
+      // Then use macrotask queue (setTimeout)
+      setTimeout(() => {
+        // Then flush animation frames
+        let frameCount = 0;
+        const frame = () => {
+          frameCount++;
+          if (frameCount < 2) {
+            requestAnimationFrame(frame);
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(frame);
+      }, 0);
+    });
+  });
