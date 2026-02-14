@@ -43,10 +43,10 @@ export const createSupabaseClient = async (): Promise<SupabaseClient | null> => 
     return null;
   }
 
-  // @ts-ignore - CDN import without type declarations
-  const { createClient } = await import(
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
-  );
+  // CDN import without type declarations
+  const { createClient } = await 
+    // @ts-expect-error - Module import from CDN URL has no type declarations
+    import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
 
   return createClient(config.url, config.anonKey);
 };

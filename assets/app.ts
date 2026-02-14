@@ -13,7 +13,7 @@ import {
   CUSTOMER_PHONE_REQUIRED,
   DEFAULT_ABOUT
 } from './config/constants';
-import type { AppState } from './types/models';
+import type { AppState, OrderMessageParams } from './types/models';
 import { store, getState } from './store/state';
 import * as actions from './store/actions';
 import { ProductMapper } from './models/ProductMapper';
@@ -33,9 +33,18 @@ import { CategoryUI } from './ui/CategoryUI';
 // import { CartHandlers } from './handlers/CartHandlers'; // Unused - for future use
 // import { CheckoutHandlers } from './handlers/CheckoutHandlers'; // Unused - for future use
 
+// Extend Window interface for custom properties
+declare global {
+  interface Window {
+    lucide?: { createIcons: () => void };
+    __DISABLE_AUTO_INIT__?: boolean;
+  }
+}
+
 let supabaseClient:any = null;
 let storageService: StorageService | null = null;
-let productService: ProductService | null = null;
+// @ts-expect-error - Declared for future use
+let productService: ProductService | null = null; // Declared for future use
 
 // Use store-managed state (backward compatible access pattern)
 // Direct mutations still work, but actions are preferred for new code
@@ -52,127 +61,127 @@ const state = new Proxy({} as AppState, {
 const categoryTrackEl = document.getElementById("category-track");
 const productsScrollEl = document.getElementById("products-scroll");
 const productSearchInput = document.getElementById("product-search") as HTMLInputElement | null;
-const cartDrawer = document.getElementById("cart-drawer");
-const cartItemsEl = document.getElementById("cart-items");
-const cartTotalEl = document.getElementById("cart-total");
-const floatingCart = document.getElementById("floating-cart");
-const floatingCount = document.getElementById("floating-count");
-const floatingTotal = document.getElementById("floating-total");
-const overlay = document.getElementById("overlay");
-const adminSection = document.getElementById("admin");
-const adminProductsEl = document.getElementById("admin-products");
-const adminOrdersEl = document.getElementById("admin-orders");
-const adminAuthEl = document.getElementById("admin-auth");
-const adminPanelEl = document.getElementById("admin-panel");
-const adminAuthErrorEl = document.getElementById("admin-auth-error");
-const adminGreetingEl = document.getElementById("admin-greeting");
-const adminLogoutButton = document.getElementById("admin-logout");
-const adminNewOrderButton = document.getElementById("admin-new-order");
-const adminProductsTable = document.getElementById("admin-products-table");
-const adminOrdersTable = document.getElementById("admin-orders-table");
+const cartDrawer = document.getElementById("cart-drawer") as HTMLElement | null;
+const cartItemsEl = document.getElementById("cart-items") as HTMLElement | null;
+const cartTotalEl = document.getElementById("cart-total") as HTMLElement | null;
+const floatingCart = document.getElementById("floating-cart") as HTMLElement | null;
+const floatingCount = document.getElementById("floating-count") as HTMLElement | null;
+const floatingTotal = document.getElementById("floating-total") as HTMLElement | null;
+const overlay = document.getElementById("overlay") as HTMLElement | null;
+const adminSection = document.getElementById("admin") as HTMLElement | null;
+const adminProductsEl = document.getElementById("admin-products") as HTMLElement | null;
+const adminOrdersEl = document.getElementById("admin-orders") as HTMLElement | null;
+const adminAuthEl = document.getElementById("admin-auth") as HTMLElement | null;
+const adminPanelEl = document.getElementById("admin-panel") as HTMLElement | null;
+const adminAuthErrorEl = document.getElementById("admin-auth-error") as HTMLElement | null;
+const adminGreetingEl = document.getElementById("admin-greeting") as HTMLElement | null;
+const adminLogoutButton = document.getElementById("admin-logout") as HTMLElement | null;
+const adminNewOrderButton = document.getElementById("admin-new-order") as HTMLElement | null;
+const adminProductsTable = document.getElementById("admin-products-table") as HTMLElement | null;
+const adminOrdersTable = document.getElementById("admin-orders-table") as HTMLElement | null;
 const adminOrdersSearchInput = document.getElementById("admin-orders-search") as HTMLInputElement | null;
-const orderDetailsModal = document.getElementById("order-details-modal");
-const orderDetailsClose = document.getElementById("order-details-close");
-const orderDetailsContent = document.getElementById("order-details-content");
-const aboutContentEl = document.getElementById("about-content");
-const adminAboutInput = document.getElementById("admin-about");
-const adminAboutSave = document.getElementById("admin-about-save");
-const adminAboutStatus = document.getElementById("admin-about-status");
-const checkoutError = document.getElementById("checkout-error");
+const orderDetailsModal = document.getElementById("order-details-modal") as HTMLElement | null;
+const orderDetailsClose = document.getElementById("order-details-close") as HTMLElement | null;
+const orderDetailsContent = document.getElementById("order-details-content") as HTMLElement | null;
+const aboutContentEl = document.getElementById("about-content") as HTMLElement | null;
+const adminAboutInput = document.getElementById("admin-about") as HTMLTextAreaElement | null;
+const adminAboutSave = document.getElementById("admin-about-save") as HTMLElement | null;
+const adminAboutStatus = document.getElementById("admin-about-status") as HTMLElement | null;
+const checkoutError = document.getElementById("checkout-error") as HTMLElement | null;
 const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
 const customerNameInput = document.getElementById("customer-name") as HTMLInputElement | null;
 const customerPhoneInput = document.getElementById("customer-phone") as HTMLInputElement | null;
-const orderModal = document.getElementById("order-modal");
-const orderModalClose = document.getElementById("order-modal-close");
-const orderSave = document.getElementById("order-save");
-const deleteConfirmModal = document.getElementById("delete-confirm-modal");
-const deleteConfirmClose = document.getElementById("delete-confirm-close");
-const deleteConfirmYes = document.getElementById("delete-confirm-yes");
-const deleteConfirmNo = document.getElementById("delete-confirm-no");
-const orderName = document.getElementById("order-name");
-const orderDate = document.getElementById("order-date");
-const orderTotal = document.getElementById("order-total");
-const orderPaid = document.getElementById("order-paid");
-const orderNotes = document.getElementById("order-notes");
+const orderModal = document.getElementById("order-modal") as HTMLElement | null;
+const orderModalClose = document.getElementById("order-modal-close") as HTMLElement | null;
+const orderSave = document.getElementById("order-save") as HTMLElement | null;
+const deleteConfirmModal = document.getElementById("delete-confirm-modal") as HTMLElement | null;
+const deleteConfirmClose = document.getElementById("delete-confirm-close") as HTMLElement | null;
+const deleteConfirmYes = document.getElementById("delete-confirm-yes") as HTMLElement | null;
+const deleteConfirmNo = document.getElementById("delete-confirm-no") as HTMLElement | null;
+const orderName = document.getElementById("order-name") as HTMLInputElement | null;
+const orderDate = document.getElementById("order-date") as HTMLInputElement | null;
+const orderTotal = document.getElementById("order-total") as HTMLInputElement | null;
+const orderPaid = document.getElementById("order-paid") as HTMLInputElement | null;
+const orderNotes = document.getElementById("order-notes") as HTMLTextAreaElement | null;
 const adminSearchInput = document.getElementById("admin-search") as HTMLInputElement | null;
-const adminCategoriesEl = document.getElementById("admin-categories");
-const adminCreateCategoryButton = document.getElementById("admin-create-category");
-const ordersAcceptingToggle = document.getElementById("orders-accepting-toggle");
-const ordersAcceptingLabel = document.getElementById("orders-accepting-label");
-const productModal = document.getElementById("product-modal");
-const modalClose = document.getElementById("modal-close");
-const modalSave = document.getElementById("modal-save");
-const modalDelete = document.getElementById("modal-delete");
-const modalTitle = document.getElementById("modal-title");
-const modalPrice = document.getElementById("modal-price");
-const modalCategoryDropdown = document.getElementById("modal-category-dropdown");
-const modalCategoryTrigger = document.getElementById("modal-category-trigger");
-const modalCategorySearch = document.getElementById("modal-category-search");
-const modalCategoryList = document.getElementById("modal-category-list");
-const modalImage = document.getElementById("modal-image");
-const modalStock = document.getElementById("modal-stock");
-const modalStatus = document.getElementById("modal-status");
-const openCreateModal = document.getElementById("open-create-modal");
-const createModal = document.getElementById("create-modal");
-const createModalClose = document.getElementById("create-modal-close");
-const createSave = document.getElementById("create-save");
-const createTitle = document.getElementById("create-title");
-const createPrice = document.getElementById("create-price");
-const createCategoryDropdown = document.getElementById("create-category-dropdown");
-const createCategoryTrigger = document.getElementById("create-category-trigger");
-const createCategorySearch = document.getElementById("create-category-search");
-const createCategoryList = document.getElementById("create-category-list");
-const createImage = document.getElementById("create-image");
-const categoryModal = document.getElementById("category-modal");
-const categoryModalClose = document.getElementById("category-modal-close");
-const categorySave = document.getElementById("category-save");
-const categoryNameInput = document.getElementById("category-name");
-const categoryImageInput = document.getElementById("category-image");
-const categoryStatus = document.getElementById("category-status");
-const categoryEditModal = document.getElementById("category-edit-modal");
-const categoryEditClose = document.getElementById("category-edit-close");
-const categoryEditNameInput = document.getElementById("category-edit-name");
-const categoryEditImageInput = document.getElementById("category-edit-image");
-const categoryEditPreview = document.getElementById("category-edit-preview");
-const categoryEditSave = document.getElementById("category-edit-save");
-const categoryEditStatus = document.getElementById("category-edit-status");
-const contactBakeryPhoneEl = document.getElementById("contact-bakery-phone");
-const contactBakeryPhoneLinkEl = document.getElementById("contact-bakery-phone-link");
-const contactStorePhoneEl = document.getElementById("contact-store-phone");
-const contactStorePhoneLinkEl = document.getElementById("contact-store-phone-link");
-const contactWhatsappEl = document.getElementById("contact-whatsapp");
-const contactWhatsappPhoneEl = document.getElementById("contact-whatsapp-phone");
-const contactEmailEl = document.getElementById("contact-email");
-const contactEmailTextEl = document.getElementById("contact-email-text");
-const contactAddressEl = document.getElementById("contact-address");
-const contactAddressLinkEl = document.getElementById("contact-address-link");
-const siteLogoEl = document.getElementById("site-logo");
-const adminLogoPreview = document.getElementById("admin-logo-preview");
-const adminLogoReplaceBtn = document.getElementById("admin-logo-replace-btn");
-const adminLogoInput = document.getElementById("admin-logo-input");
+const adminCategoriesEl = document.getElementById("admin-categories") as HTMLElement | null;
+const adminCreateCategoryButton = document.getElementById("admin-create-category") as HTMLElement | null;
+const ordersAcceptingToggle = document.getElementById("orders-accepting-toggle") as HTMLInputElement | null;
+const ordersAcceptingLabel = document.getElementById("orders-accepting-label") as HTMLElement | null;
+const productModal = document.getElementById("product-modal") as HTMLElement | null;
+const modalClose = document.getElementById("modal-close") as HTMLElement | null;
+const modalSave = document.getElementById("modal-save") as HTMLElement | null;
+const modalDelete = document.getElementById("modal-delete") as HTMLElement | null;
+const modalTitle = document.getElementById("modal-title") as HTMLInputElement | null;
+const modalPrice = document.getElementById("modal-price") as HTMLInputElement | null;
+const modalCategoryDropdown = document.getElementById("modal-category-dropdown") as HTMLElement | null;
+const modalCategoryTrigger = document.getElementById("modal-category-trigger") as HTMLElement | null;
+const modalCategorySearch = document.getElementById("modal-category-search") as HTMLElement | null;
+const modalCategoryList = document.getElementById("modal-category-list") as HTMLElement | null;
+const modalImage = document.getElementById("modal-image") as HTMLInputElement | null;
+const modalStock = document.getElementById("modal-stock") as HTMLInputElement | null;
+const modalStatus = document.getElementById("modal-status") as HTMLElement | null;
+const openCreateModal = document.getElementById("open-create-modal") as HTMLElement | null;
+const createModal = document.getElementById("create-modal") as HTMLElement | null;
+const createModalClose = document.getElementById("create-modal-close") as HTMLElement | null;
+const createSave = document.getElementById("create-save") as HTMLElement | null;
+const createTitle = document.getElementById("create-title") as HTMLInputElement | null;
+const createPrice = document.getElementById("create-price") as HTMLInputElement | null;
+const createCategoryDropdown = document.getElementById("create-category-dropdown") as HTMLElement | null;
+const createCategoryTrigger = document.getElementById("create-category-trigger") as HTMLElement | null;
+const createCategorySearch = document.getElementById("create-category-search") as HTMLElement | null;
+const createCategoryList = document.getElementById("create-category-list") as HTMLElement | null;
+const createImage = document.getElementById("create-image") as HTMLInputElement | null;
+const categoryModal = document.getElementById("category-modal") as HTMLElement | null;
+const categoryModalClose = document.getElementById("category-modal-close") as HTMLElement | null;
+const categorySave = document.getElementById("category-save") as HTMLElement | null;
+const categoryNameInput = document.getElementById("category-name") as HTMLInputElement | null;
+const categoryImageInput = document.getElementById("category-image") as HTMLInputElement | null;
+const categoryStatus = document.getElementById("category-status") as HTMLElement | null;
+const categoryEditModal = document.getElementById("category-edit-modal") as HTMLElement | null;
+const categoryEditClose = document.getElementById("category-edit-close") as HTMLElement | null;
+const categoryEditNameInput = document.getElementById("category-edit-name") as HTMLInputElement | null;
+const categoryEditImageInput = document.getElementById("category-edit-image") as HTMLInputElement | null;
+const categoryEditPreview = document.getElementById("category-edit-preview") as HTMLElement | null;
+const categoryEditSave = document.getElementById("category-edit-save") as HTMLElement | null;
+const categoryEditStatus = document.getElementById("category-edit-status") as HTMLElement | null;
+const contactBakeryPhoneEl = document.getElementById("contact-bakery-phone") as HTMLElement | null;
+const contactBakeryPhoneLinkEl = document.getElementById("contact-bakery-phone-link") as HTMLAnchorElement | null;
+const contactStorePhoneEl = document.getElementById("contact-store-phone") as HTMLElement | null;
+const contactStorePhoneLinkEl = document.getElementById("contact-store-phone-link") as HTMLAnchorElement | null;
+const contactWhatsappEl = document.getElementById("contact-whatsapp") as HTMLAnchorElement | null;
+const contactWhatsappPhoneEl = document.getElementById("contact-whatsapp-phone") as HTMLElement | null;
+const contactEmailEl = document.getElementById("contact-email") as HTMLAnchorElement | null;
+const contactEmailTextEl = document.getElementById("contact-email-text") as HTMLElement | null;
+const contactAddressEl = document.getElementById("contact-address") as HTMLElement | null;
+const contactAddressLinkEl = document.getElementById("contact-address-link") as HTMLAnchorElement | null;
+const siteLogoEl = document.getElementById("site-logo") as HTMLImageElement | null;
+const adminLogoPreview = document.getElementById("admin-logo-preview") as HTMLImageElement | null;
+const adminLogoReplaceBtn = document.getElementById("admin-logo-replace-btn") as HTMLElement | null;
+const adminLogoInput = document.getElementById("admin-logo-input") as HTMLInputElement | null;
 // New admin editable fields
-const adminHeaderTitleInput = document.getElementById("admin-header-title");
-const adminHeaderTitleSave = document.getElementById("admin-header-title-save");
+const adminHeaderTitleInput = document.getElementById("admin-header-title") as HTMLInputElement | null;
+const adminHeaderTitleSave = document.getElementById("admin-header-title-save") as HTMLElement | null;
 const adminHeaderTitleStatus = document.getElementById("admin-header-title-status");
-const adminHeroBadgeInput = document.getElementById("admin-hero-badge");
-const adminHeroTitleInput = document.getElementById("admin-hero-title");
-const adminHeroDescriptionInput = document.getElementById("admin-hero-description");
-const adminHeroChipsContainer = document.getElementById("admin-hero-chips-container");
-const adminHeroAddChipBtn = document.getElementById("admin-hero-add-chip");
-const adminHeroImageFile = document.getElementById("admin-hero-image-file");
-const adminHeroImagePreview = document.getElementById("admin-hero-image-preview");
-const adminHeroSave = document.getElementById("admin-hero-save");
-const adminHeroStatus = document.getElementById("admin-hero-status");
-const adminFeaturedProductsContainer = document.getElementById("admin-featured-products");
-const adminFeaturedSave = document.getElementById("admin-featured-save");
-const adminFeaturedStatus = document.getElementById("admin-featured-status");
-const adminContactBakeryPhoneInput = document.getElementById("admin-contact-bakery-phone");
-const adminContactStorePhoneInput = document.getElementById("admin-contact-store-phone");
-const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp");
-const adminContactEmailInput = document.getElementById("admin-contact-email");
-const adminContactAddressInput = document.getElementById("admin-contact-address");
-const adminContactSave = document.getElementById("admin-contact-save");
-const adminContactStatus = document.getElementById("admin-contact-status");
+const adminHeroBadgeInput = document.getElementById("admin-hero-badge") as HTMLInputElement | null;
+const adminHeroTitleInput = document.getElementById("admin-hero-title") as HTMLInputElement | null;
+const adminHeroDescriptionInput = document.getElementById("admin-hero-description") as HTMLTextAreaElement | null;
+const adminHeroChipsContainer = document.getElementById("admin-hero-chips-container") as HTMLElement | null;
+const adminHeroAddChipBtn = document.getElementById("admin-hero-add-chip") as HTMLElement | null;
+const adminHeroImageFile = document.getElementById("admin-hero-image-file") as HTMLInputElement | null;
+const adminHeroImagePreview = document.getElementById("admin-hero-image-preview") as HTMLImageElement | null;
+const adminHeroSave = document.getElementById("admin-hero-save") as HTMLElement | null;
+const adminHeroStatus = document.getElementById("admin-hero-status") as HTMLElement | null;
+const adminFeaturedProductsContainer = document.getElementById("admin-featured-products") as HTMLElement | null;
+const adminFeaturedSave = document.getElementById("admin-featured-save") as HTMLElement | null;
+const adminFeaturedStatus = document.getElementById("admin-featured-status") as HTMLElement | null;
+const adminContactBakeryPhoneInput = document.getElementById("admin-contact-bakery-phone") as HTMLInputElement | null;
+const adminContactStorePhoneInput = document.getElementById("admin-contact-store-phone") as HTMLInputElement | null;
+const adminContactWhatsappInput = document.getElementById("admin-contact-whatsapp") as HTMLInputElement | null;
+const adminContactEmailInput = document.getElementById("admin-contact-email") as HTMLInputElement | null;
+const adminContactAddressInput = document.getElementById("admin-contact-address") as HTMLInputElement | null;
+const adminContactSave = document.getElementById("admin-contact-save") as HTMLElement | null;
+const adminContactStatus = document.getElementById("admin-contact-status") as HTMLElement | null;
 const pickupDateInput = document.getElementById("pickup-date") as HTMLInputElement | null;
 const pickupTimeInput = document.getElementById("pickup-time") as HTMLInputElement | null;
 const orderChannelModal = document.getElementById("order-channel-modal");
@@ -642,10 +651,10 @@ const renderAdmin = () => {
     }
     row.innerHTML = `
       <td>${order.order_number ?? ""}</td>
-      <td>${order.customer.name}</td>
+      <td>${order.customer?.name || 'Unknown'}</td>
       <td>${new Date(order.created_at).toLocaleString("he-IL", { hour12: false })}</td>
       <td class="text-amber-900 font-semibold">${formatCurrency(
-        order.total
+        order.total ?? 0
       )}</td>
       <td>
         <input type="checkbox" class="form-checkbox" data-order-field="paid" data-order-id="${
@@ -679,41 +688,41 @@ const renderAdmin = () => {
 
 const updateRoute = () => {
   const isAdmin = window.location.hash === "#admin";
-  adminSection.classList.toggle("hidden", !isAdmin);
-  document.getElementById("catalog").classList.toggle("hidden", isAdmin);
-  document.getElementById("checkout").classList.toggle("hidden", isAdmin);
+  adminSection?.classList.toggle("hidden", !isAdmin);
+  document.getElementById("catalog")?.classList.toggle("hidden", isAdmin);
+  document.getElementById("checkout")?.classList.toggle("hidden", isAdmin);
   document.getElementById("contact")?.classList.toggle("hidden", isAdmin);
   document.getElementById("about")?.classList.toggle("hidden", isAdmin);
   document.getElementById("hero")?.classList.toggle("hidden", isAdmin);
   // Update button visibility based on admin page and auth state
   const isAuthenticated = state.session !== null;
   if (isAdmin && isAuthenticated) {
-    adminLogoReplaceBtn.classList.remove("hidden");
+    adminLogoReplaceBtn?.classList.remove("hidden");
   } else {
-    adminLogoReplaceBtn.classList.add("hidden");
+    adminLogoReplaceBtn?.classList.add("hidden");
   }
   if (!isAdmin) {
-    document.getElementById("catalog").classList.remove("hidden");
-    document.getElementById("checkout").classList.remove("hidden");
+    document.getElementById("catalog")?.classList.remove("hidden");
+    document.getElementById("checkout")?.classList.remove("hidden");
   }
 };
 
-const setAdminUI = (isAuthenticated) => {
-  adminAuthEl.classList.toggle("hidden", isAuthenticated);
-  adminPanelEl.classList.toggle("hidden", !isAuthenticated);
-  adminGreetingEl.classList.toggle("hidden", !isAuthenticated);
-  adminLogoutButton.classList.toggle("hidden", !isAuthenticated);
+const setAdminUI = (isAuthenticated: boolean) => {
+  adminAuthEl?.classList.toggle("hidden", isAuthenticated);
+  adminPanelEl?.classList.toggle("hidden", !isAuthenticated);
+  adminGreetingEl?.classList.toggle("hidden", !isAuthenticated);
+  adminLogoutButton?.classList.toggle("hidden", !isAuthenticated);
   // Show button only if authenticated AND on admin page
   const isAdmin = window.location.hash === "#admin";
   if (isAuthenticated && isAdmin) {
-    adminLogoReplaceBtn.classList.remove("hidden");
+    adminLogoReplaceBtn?.classList.remove("hidden");
   } else {
-    adminLogoReplaceBtn.classList.add("hidden");
+    adminLogoReplaceBtn?.classList.add("hidden");
   }
 };
 
 
-const setAboutContent = (text) => {
+const setAboutContent = (text: string) => {
   if (!aboutContentEl) return;
   const safeText = (text || DEFAULT_ABOUT).trim();
   aboutContentEl.innerHTML = safeText.replace(/\n/g, "<br />");
@@ -722,34 +731,34 @@ const setAboutContent = (text) => {
   }
 };
 
-const sanitizeFileName = (text) => {
-  if (!text) return 'file';
-  // Convert to lowercase, replace spaces with dashes, remove non-ASCII/non-alphanumeric
-  const sanitized = text
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9_-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  // Fallback if everything was stripped out
-  return sanitized || 'file';
-};
+// const sanitizeFileName = (text: string) => {
+//   if (!text) return 'file';
+//   // Convert to lowercase, replace spaces with dashes, remove non-ASCII/non-alphanumeric
+//   const sanitized = text
+//     .toLowerCase()
+//     .replace(/\s+/g, '-')
+//     .replace(/[^a-z0-9_-]/g, '')
+//     .replace(/-+/g, '-')
+//     .replace(/^-|-$/g, '');
+//   // Fallback if everything was stripped out
+//   return sanitized || 'file';
+// };
 
-const uploadProductImage = async (file, prefix) => {
+const uploadProductImage = async (file: File, prefix: string) => {
   if (!file) return null;
   if (!ensureSupabase() || !storageService) return null;
   return await storageService.uploadProductImage(file, prefix);
 };
 
-const uploadCategoryImage = async (file, prefix) => {
+const uploadCategoryImage = async (file: File, prefix: string) => {
   if (!file) return null;
   if (!ensureSupabase() || !storageService) return null;
   return await storageService.uploadCategoryImage(file, prefix);
 };
 
 const openCart = () => {
-  cartDrawer.classList.add("open");
-  overlay.classList.remove("hidden");
+  cartDrawer?.classList.add("open");
+  overlay?.classList.remove("hidden");
   // Prevent body scroll on mobile when cart is open
   // Avoid position:fixed on body — it breaks fixed children and scroll on iOS Safari
   document.documentElement.style.overflow = "hidden";
@@ -757,8 +766,8 @@ const openCart = () => {
 };
 
 const closeCart = () => {
-  cartDrawer.classList.remove("open");
-  overlay.classList.add("hidden");
+  cartDrawer?.classList.remove("open");
+  overlay?.classList.add("hidden");
   // Re-enable body scroll
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
@@ -775,32 +784,32 @@ const updateQty = (id: any, delta: any) => {
   updateCartUI();
 };
 
-const setQty = (id, value) => {
-  state.cart = CartManager.setQuantity(state.cart, id, value);
-  updateCartUI();
-};
+// const setQty = (id: any, value: any) => {
+//   state.cart = CartManager.setQuantity(state.cart, id, value);
+//   updateCartUI();
+// };
 
 // Order building functions (use OrderBuilder class)
 const buildOrderMessage = (params: OrderMessageParams) => {
   return OrderBuilder.buildOrderMessage({
-    items: params.items,
-    customerName: params.customerName,
-    customerPhone: params.customerPhone,
-    pickupDate: params.pickupDate,
-    pickupTime: params.pickupTime,
+    items: params.items as any,
+    customerName: params.name,
+    customerPhone: params.phone,
+    pickupDate: params.date,
+    pickupTime: params.time,
     totalPrice: params.totalPrice,
     userNotes: params.userNotes
   });
 };
 
-const buildOrderLinks = (message) => {
+const buildOrderLinks = (message: string) => {
   return OrderBuilder.buildOrderLinks(message, {
     whatsappPhone: state.checkoutWhatsappPhone,
     email: state.checkoutEmail
   });
 };
 
-const openOrderChannelModal = (links) => {
+const openOrderChannelModal = (links: any) => {
   if (!orderChannelModal) return;
   state.pendingOrderLinks = links;
   orderChannelModal.classList.remove("hidden");
@@ -820,7 +829,7 @@ const clearCheckoutState = () => {
   updateCartUI();
 };
 
-const handleCheckout = async (event) => {
+const handleCheckout = async (event: Event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
   
@@ -839,14 +848,14 @@ const handleCheckout = async (event) => {
     checkoutError.classList.add("hidden");
   }
   
-  const form = event.target;
+  const form = event.target as HTMLFormElement;
   const formData = new FormData(form);
   const payload = {
-    name: formData.get("name").trim(),
-    phone: formData.get("phone").trim(),
-    date: formData.get("date"),
-    time: formData.get("time"),
-    user_notes: formData.get("user_notes")?.trim() || "",
+    name: (formData.get("name") as string || "").trim(),
+    phone: (formData.get("phone") as string || "").trim(),
+    date: formData.get("date") as string,
+    time: formData.get("time") as string,
+    user_notes: (formData.get("user_notes") as string || "").trim(),
   };
 
   setPickupValidity();
@@ -868,8 +877,9 @@ const handleCheckout = async (event) => {
     return;
   }
   
-  if (!event.target.checkValidity()) {
-    event.target.reportValidity();
+  if (!form) return;
+  if (!form.checkValidity()) {
+    form.reportValidity();
     return;
   }
 
@@ -923,13 +933,13 @@ const handleCreateOrder = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
 
-  const name = orderName.value.trim();
-  const createdAt = orderDate.value
+  const name = orderName?.value.trim() || "";
+  const createdAt = orderDate?.value
     ? new Date(orderDate.value).toISOString()
     : new Date().toISOString();
-  const total = Number(orderTotal.value) || 0;
-  const paid = orderPaid.checked;
-  const notes = orderNotes.value.trim();
+  const total = Number(orderTotal?.value) || 0;
+  const paid = orderPaid?.checked || false;
+  const notes = orderNotes?.value.trim() || "";
 
   if (!name) {
     alert("יש להזין שם.");
@@ -953,12 +963,12 @@ const handleCreateOrder = async () => {
     return;
   }
 
-  orderName.value = "";
-  orderDate.value = "";
-  orderTotal.value = "";
-  orderPaid.checked = false;
-  orderNotes.value = "";
-  orderModal.classList.add("hidden");
+  if (orderName) orderName.value = "";
+  if (orderDate) orderDate.value = "";
+  if (orderTotal) orderTotal.value = "";
+  if (orderPaid) orderPaid.checked = false;
+  if (orderNotes) orderNotes.value = "";
+  orderModal?.classList.add("hidden");
   await fetchOrders();
   renderAdmin();
 };
@@ -1001,17 +1011,18 @@ const handleAdminChange = async () => {
   );
 
   let imageUrl = product.image;
-  if (modalImage?.files?.length) {
-    imageUrl = await uploadProductImage(modalImage.files[0], product.id);
+  if (modalImage?.files?.length && modalImage.files[0]) {
+    const uploaded = await uploadProductImage(modalImage.files[0], String(product.id));
+    if (uploaded) imageUrl = uploaded;
   }
 
-  product.title = modalTitle.value.trim();
-  product.price = Number(modalPrice.value) || 0;
+  product.title = modalTitle?.value.trim() || product.title;
+  product.price = Number(modalPrice?.value) || 0;
   product.categoryId = categoryId;
   product.categoryName = category?.category_name || product.categoryName || "";
   product.image = imageUrl;
-  product.inStock = modalStock.checked;
-  const modalDiscount = document.getElementById("modal-discount");
+  product.inStock = modalStock?.checked || false;
+  const modalDiscount = document.getElementById("modal-discount") as HTMLInputElement | null;
   product.discountPercentage = modalDiscount ? Number(modalDiscount.value) || 0 : 0;
 
   const { error } = await supabaseClient
@@ -1032,8 +1043,8 @@ const handleAdminChange = async () => {
   closeModal();
 };
 
-const generateId = (title) =>
-  `${title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+// const generateId = (title: any) =>
+//   `${title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
 const handleCreateProduct = async () => {
   if (!ensureSupabase()) return;
@@ -1052,14 +1063,16 @@ const handleCreateProduct = async () => {
     alert("יש להעלות תמונה למוצר.");
     return;
   }
+  const file = createImage.files[0];
+  if (!file) return;
   const uploadedUrl = await uploadProductImage(
-    createImage.files[0],
-    createTitle.value.trim() || "product"
+    file,
+    createTitle?.value.trim() || "product"
   );
   if (!uploadedUrl) return;
   const product = {
-    title: createTitle.value.trim(),
-    price: Number(createPrice.value) || 0,
+    title: createTitle?.value.trim() || "",
+    price: Number(createPrice?.value) || 0,
     categoryId,
     categoryName: category?.category_name || "",
     image: uploadedUrl,
@@ -1076,18 +1089,18 @@ const handleCreateProduct = async () => {
     return;
   }
 
-  createTitle.value = "";
-  createPrice.value = "";
+  if (createTitle) createTitle.value = "";
+  if (createPrice) createPrice.value = "";
   state.creatingCategoryId = null;
   setCategoryTriggerLabel(createCategoryTrigger, "בחר קטגוריה");
-  createImage.value = "";
+  if (createImage) createImage.value = "";
   closeCreateModal();
   await fetchProducts();
   renderProducts();
   renderAdmin();
 };
 
-const handleDeleteProduct = async (id) => {
+const handleDeleteProduct = async (id: any) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
 
@@ -1112,14 +1125,14 @@ const handleDeleteProduct = async (id) => {
   closeModal();
 };
 
-const handleAdminLogin = async (event) => {
+const handleAdminLogin = async (event: Event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
 
-  adminAuthErrorEl.classList.add("hidden");
-  const formData = new FormData(event.target);
-  const email = formData.get("email");
-  const password = formData.get("password");
+  adminAuthErrorEl?.classList.add("hidden");
+  const formData = new FormData(event.target as HTMLFormElement);
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
   const { error, data } = await supabaseClient.auth.signInWithPassword({
     email,
@@ -1127,16 +1140,16 @@ const handleAdminLogin = async (event) => {
   });
 
   if (error) {
-    adminAuthErrorEl.textContent = "פרטי ההתחברות שגויים.";
-    adminAuthErrorEl.classList.remove("hidden");
+    adminAuthErrorEl && (adminAuthErrorEl.textContent = "פרטי ההתחברות שגויים.");
+    adminAuthErrorEl?.classList.remove("hidden");
     return;
   }
 
   state.session = data.session;
   await fetchProfile();
   if (state.role !== "admin") {
-    adminAuthErrorEl.textContent = "אין הרשאות ניהול לחשבון זה.";
-    adminAuthErrorEl.classList.remove("hidden");
+    adminAuthErrorEl && (adminAuthErrorEl.textContent = "אין הרשאות ניהול לחשבון זה.");
+    adminAuthErrorEl?.classList.remove("hidden");
     await supabaseClient.auth.signOut();
     state.session = null;
     state.role = null;
@@ -1144,7 +1157,7 @@ const handleAdminLogin = async (event) => {
     return;
   }
 
-  adminGreetingEl.textContent = `Hello ${state.session.user.email}`;
+  adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
 
   setAdminUI(true);
   await fetchOrders();
@@ -1156,7 +1169,7 @@ const handleLogout = async () => {
   await supabaseClient.auth.signOut();
   state.session = null;
   state.role = null;
-  adminGreetingEl.textContent = "";
+  adminGreetingEl && (adminGreetingEl.textContent = "");
   setAdminUI(false);
 };
 
@@ -1205,7 +1218,7 @@ const fetchCategories = async () => {
   }
 
   console.log("[fetchCategories] Fetched raw data:", data);
-  state.categories = (data || []).map((item) => ({
+  state.categories = (data || []).map((item: any) => ({
     category_id: item.id,
     category_name: item.name,
     image_url: item.image_url || "",
@@ -1251,7 +1264,7 @@ const fetchSiteMeta = async () => {
   // Set orders accepting state
   state.ordersAccepting = data[0].orders_accepting !== false; // Default to true
   if (ordersAcceptingToggle) {
-    ordersAcceptingToggle.checked = state.ordersAccepting;
+    ordersAcceptingToggle && (ordersAcceptingToggle.checked = state.ordersAccepting);
   }
   if (ordersAcceptingLabel) {
     ordersAcceptingLabel.textContent = state.ordersAccepting ? 'פתוח' : 'סגור';
@@ -1268,26 +1281,26 @@ const fetchSiteMeta = async () => {
   
   // Set admin inputs with fetched values (only for existing columns)
   if (adminContactBakeryPhoneInput) {
-    adminContactBakeryPhoneInput.value = data[0].bakery_telephone || "";
+    adminContactBakeryPhoneInput && (adminContactBakeryPhoneInput.value = data[0].bakery_telephone || "");
   }
   if (adminContactStorePhoneInput) {
-    adminContactStorePhoneInput.value = data[0].store_phone || "";
+    adminContactStorePhoneInput && (adminContactStorePhoneInput.value = data[0].store_phone || "");
   }
   if (adminContactWhatsappInput) {
     // Strip the + prefix for display in admin input
     const whatsappValue = data[0].contact_whatsapp || "";
-    adminContactWhatsappInput.value = whatsappValue.startsWith('+') ? whatsappValue.substring(1) : whatsappValue;
+    adminContactWhatsappInput && (adminContactWhatsappInput.value = whatsappValue.startsWith('+') ? whatsappValue.substring(1) : whatsappValue);
   }
   if (adminContactEmailInput) {
-    adminContactEmailInput.value = data[0].contact_email || "";
+    adminContactEmailInput && (adminContactEmailInput.value = data[0].contact_email || "");
   }
   if (adminContactAddressInput) {
-    adminContactAddressInput.value = data[0].contact_address || "";
+    adminContactAddressInput && (adminContactAddressInput.value = data[0].contact_address || "");
   }
   
   // Load hero fields if they exist
   if (adminHeroBadgeInput && data[0].hero_badge) {
-    adminHeroBadgeInput.value = data[0].hero_badge;
+    adminHeroBadgeInput && (adminHeroBadgeInput.value = data[0].hero_badge);
     state.heroBadge = data[0].hero_badge;
     const heroBadge = document.getElementById("hero-badge");
     if (heroBadge) {
@@ -1295,7 +1308,7 @@ const fetchSiteMeta = async () => {
     }
   }
   if (adminHeroTitleInput && data[0].hero_title) {
-    adminHeroTitleInput.value = data[0].hero_title;
+    adminHeroTitleInput && (adminHeroTitleInput.value = data[0].hero_title);
     state.heroTitle = data[0].hero_title;
     const heroTitle = document.querySelector("#hero h2");
     if (heroTitle) {
@@ -1303,7 +1316,7 @@ const fetchSiteMeta = async () => {
     }
   }
   if (adminHeroDescriptionInput && data[0].hero_description) {
-    adminHeroDescriptionInput.value = data[0].hero_description;
+    adminHeroDescriptionInput && (adminHeroDescriptionInput.value = data[0].hero_description);
     state.heroDescription = data[0].hero_description;
     const heroDesc = document.getElementById("hero-description");
     if (heroDesc) {
@@ -1322,16 +1335,13 @@ const fetchSiteMeta = async () => {
         <img src="${data[0].hero_image_url}" alt="תצוגה מקדימה" class="max-h-32 rounded" />
       `;
     }
-    const heroImage = document.getElementById("hero-image");
+    const heroImage = document.getElementById("hero-image") as HTMLImageElement | null;
     if (heroImage) {
       heroImage.src = data[0].hero_image_url;
     }
   }
   
   // Update contact display
-  if (data[0].contact_phone) {
-    updateContactPhone(data[0].contact_phone);
-  }
   if (data[0].bakery_telephone) {
     updateContactBakeryPhone(data[0].bakery_telephone);
   }
@@ -1352,7 +1362,7 @@ const fetchSiteMeta = async () => {
 
 };
 
-const updateOrdersAccepting = async (accepting) => {
+const updateOrdersAccepting = async (accepting: boolean) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
   
@@ -1408,7 +1418,7 @@ const saveAboutContent = async () => {
     adminAboutStatus.textContent = "שומר...";
     adminAboutStatus.className = "text-sm mt-2 text-stone-500";
   }
-  const text = adminAboutInput.value.trim();
+  const text = adminAboutInput?.value.trim() || DEFAULT_ABOUT;
   if (!text) {
     alert("יש להזין טקסט אודות.");
     if (adminAboutStatus) {
@@ -1445,7 +1455,7 @@ const saveAboutContent = async () => {
   }
 };
 
-const setLogo = (url) => {
+const setLogo = (url: string) => {
   if (siteLogoEl) {
     siteLogoEl.src = url;
   }
@@ -1454,7 +1464,7 @@ const setLogo = (url) => {
   }
 };
 
-const uploadLogoImage = async (file) => {
+const uploadLogoImage = async (file: File) => {
   if (!file) return null;
   if (!ensureSupabase()) return null;
   
@@ -1480,7 +1490,7 @@ const uploadLogoImage = async (file) => {
   return data.publicUrl;
 };
 
-const uploadHeroImage = async (file) => {
+const uploadHeroImage = async (file: File) => {
   if (!file) return null;
   if (!ensureSupabase()) return null;
   
@@ -1506,7 +1516,7 @@ const uploadHeroImage = async (file) => {
   return data.publicUrl;
 };
 
-const saveHeroImage = async (file) => {
+const saveHeroImage = async (file: File) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
   
@@ -1541,7 +1551,7 @@ const saveHeroImage = async (file) => {
   }
 };
 
-const saveLogoImage = async (file) => {
+const saveLogoImage = async (file: File) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
   
@@ -1585,15 +1595,15 @@ const saveLogoImage = async (file) => {
   alert("הלוגו נשמר בהצלחה!");
   
   // Clear the file input
-  adminLogoInput.value = "";
+  if (adminLogoInput) adminLogoInput.value = "";
 };
 
-const updateContactPhone = (phone) => {
-  // contactPhone display is now handled by updateContactBakeryPhone
-  // This function kept for backward compatibility
-};
+// const updateContactPhone = (phone: any) => {
+//   // contactPhone display is now handled by updateContactBakeryPhone
+//   // This function kept for backward compatibility
+// };
 
-const updateContactBakeryPhone = (phone) => {
+const updateContactBakeryPhone = (phone: string) => {
   const safePhone = phone || CONTACT_PHONE;
   state.bakeryPhone = safePhone;
   if (contactBakeryPhoneEl) {
@@ -1604,7 +1614,7 @@ const updateContactBakeryPhone = (phone) => {
   }
 };
 
-const updateContactStorePhone = (phone) => {
+const updateContactStorePhone = (phone: string) => {
   const safePhone = phone || CONTACT_PHONE;
   state.storePhone = safePhone;
   if (contactStorePhoneEl) {
@@ -1615,7 +1625,7 @@ const updateContactStorePhone = (phone) => {
   }
 };
 
-const updateContactWhatsapp = (whatsapp) => {
+const updateContactWhatsapp = (whatsapp: string) => {
   if (!whatsapp) {
     state.checkoutWhatsappPhone = DEFAULT_WHATSAPP_PHONE;
     return;
@@ -1642,7 +1652,7 @@ const updateContactWhatsapp = (whatsapp) => {
   }
 };
 
-const updateContactEmail = (email) => {
+const updateContactEmail = (email: string) => {
   state.checkoutEmail = email || DEFAULT_ORDER_EMAIL;
   if (contactEmailEl) {
     contactEmailEl.href = `mailto:${email}`;
@@ -1652,7 +1662,7 @@ const updateContactEmail = (email) => {
   }
 };
 
-const updateContactAddress = (address) => {
+const updateContactAddress = (address: string) => {
   if (contactAddressEl) {
     contactAddressEl.textContent = address;
   }
@@ -1682,7 +1692,7 @@ const saveHeaderTitle = async () => {
     adminHeaderTitleStatus.className = "text-sm mt-2 text-stone-500";
   }
   
-  const title = adminHeaderTitleInput.value.trim();
+  const title = adminHeaderTitleInput?.value.trim() || "";
   if (!title) {
     alert("יש להזין כותרת.");
     if (adminHeaderTitleStatus) {
@@ -1734,13 +1744,13 @@ const saveHero = async () => {
   }
   
   const badge = adminHeroBadgeInput ? adminHeroBadgeInput.value.trim() : "";
-  const title = adminHeroTitleInput.value.trim();
-  const description = adminHeroDescriptionInput.value.trim();
+  const title = adminHeroTitleInput?.value.trim() || "";
+  const description = adminHeroDescriptionInput?.value.trim() || "";
   const imageUrl = state.heroImageUrl;
   
   // Collect chip values from dynamic inputs
   const chips = Array.from(document.querySelectorAll(".hero-chip-input"))
-    .map((input) => input.value.trim())
+    .map((input) => (input as HTMLInputElement).value.trim())
     .filter((chip) => chip.length > 0);
   
   if (!title || !description) {
@@ -1752,7 +1762,7 @@ const saveHero = async () => {
     return;
   }
 
-  const payload = {
+  const payload: any = {
     hero_title: title,
     hero_description: description,
     hero_chips: chips,
@@ -1801,7 +1811,7 @@ const saveHero = async () => {
   
   renderHeroChipsDisplay();
   
-  const heroImage = document.getElementById("hero-image");
+  const heroImage = document.getElementById("hero-image") as HTMLImageElement | null;
   if (heroImage && imageUrl) {
     heroImage.src = imageUrl;
   }
@@ -1834,10 +1844,10 @@ const renderHeroChipsAdmin = () => {
     `;
     adminHeroChipsContainer.appendChild(chipDiv);
     
-    const input = chipDiv.querySelector(".hero-chip-input");
+    const input = chipDiv.querySelector(".hero-chip-input") as HTMLInputElement | null;
     if (input) {
       input.addEventListener("input", (e) => {
-        state.heroChips[index] = e.target.value;
+        state.heroChips[index] = (e.target as HTMLInputElement).value;
       });
     }
     
@@ -1866,8 +1876,8 @@ const renderHeroChipsDisplay = () => {
     heroChipsEl.appendChild(span);
   });
   
-  if (window.lucide) {
-    window.lucide.createIcons();
+  if ((window as any).lucide) {
+    (window as any).lucide.createIcons();
   }
 };
 
@@ -1879,7 +1889,8 @@ const renderFeaturedProductsCheckboxes = () => {
   const inStockProducts = state.products.filter((p) => p.inStock);
   
   inStockProducts.forEach((product) => {
-    const isChecked = state.featuredProductIds && state.featuredProductIds.includes(product.id);
+    const productId = typeof product.id === 'string' ? parseInt(product.id) : product.id;
+    const isChecked = state.featuredProductIds && state.featuredProductIds.includes(productId);
     const label = document.createElement("label");
     label.className = "flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer";
     label.innerHTML = `
@@ -1900,8 +1911,8 @@ const saveFeaturedProducts = async () => {
   
   const checkboxes = document.querySelectorAll(".featured-product-checkbox");
   const selectedIds = Array.from(checkboxes)
-    .filter((cb) => cb.checked)
-    .map((cb) => Number(cb.value));
+    .filter((cb) => (cb as HTMLInputElement).checked)
+    .map((cb) => Number((cb as HTMLInputElement).value));
   
   if (selectedIds.length === 0) {
     alert("בחרו לפחות מוצר אחד.");
@@ -1946,9 +1957,10 @@ const saveFeaturedProducts = async () => {
 
   state.featuredProductIds = selectedIds;
   // Update featured products array and re-render (filter out-of-stock)
-  state.featuredProducts = state.products.filter((p) =>
-    selectedIds.includes(p.id) && p.inStock
-  );
+  state.featuredProducts = state.products.filter((p) => {
+    const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id;
+    return selectedIds.includes(productId) && p.inStock;
+  });
   renderProducts();
   
   if (adminFeaturedStatus) {
@@ -1968,13 +1980,13 @@ const saveContactInfo = async () => {
     adminContactStatus.className = "text-sm mt-2 text-stone-500";
   }
 
-  const bakeryPhone = adminContactBakeryPhoneInput.value.trim();
+  const bakeryPhone = adminContactBakeryPhoneInput?.value.trim() || "";
   const storePhone = adminContactStorePhoneInput
     ? adminContactStorePhoneInput.value.trim()
     : bakeryPhone;
-  let whatsapp = adminContactWhatsappInput.value.trim();
-  const email = adminContactEmailInput.value.trim();
-  const address = adminContactAddressInput.value.trim();
+  let whatsapp = adminContactWhatsappInput?.value.trim() || "";
+  const email = adminContactEmailInput?.value.trim() || "";
+  const address = adminContactAddressInput?.value.trim() || "";
 
   console.log("[saveContactInfo] Form values:", { bakeryPhone, storePhone, whatsapp, email, address });
 
@@ -2028,7 +2040,6 @@ const saveContactInfo = async () => {
 
   console.log("[saveContactInfo] Save successful, updating UI");
   
-  updateContactPhone(bakeryPhone);
   updateContactBakeryPhone(bakeryPhone);
   updateContactStorePhone(storePhone);
   updateContactWhatsapp(whatsapp);
@@ -2044,6 +2055,7 @@ const saveContactInfo = async () => {
   await fetchSiteMeta();
 };
 
+// @ts-expect-error - Function declared for future use
 const fetchFeaturedProducts = async () => {
   if (!ensureSupabase()) return;
   if (!state.siteMetaId) {
@@ -2063,7 +2075,7 @@ const fetchFeaturedProducts = async () => {
     return;
   }
 
-  state.featuredProductIds = (data || []).map((item) => item.product_id);
+  state.featuredProductIds = (data || []).map((item: any) => item.product_id);
   renderFeaturedProductsCheckboxes();
 };
 
@@ -2115,14 +2127,14 @@ const openAdminIfSession = async () => {
   const isAdmin = state.role === "admin";
   setAdminUI(isAdmin);
   if (isAdmin) {
-    adminGreetingEl.textContent = `Hello ${state.session.user.email}`;
+    adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
     await fetchOrders();
     renderAdmin();
     renderFeaturedProductsCheckboxes();
   }
 };
 
-const updateOrderField = async (id, field, value) => {
+const updateOrderField = async (id: any, field: string, value: any) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
   const { error } = await supabaseClient
@@ -2137,46 +2149,48 @@ const updateOrderField = async (id, field, value) => {
   renderAdmin();
 };
 
-const showOrderDetails = (order) => {
+const showOrderDetails = (order: any) => {
   const items = (order.items || [])
-    .map((item) => `${item.title} x ${item.qty}`)
+    .map((item: any) => `${item.title} x ${item.qty}`)
     .join("<br />");
-  orderDetailsContent.innerHTML = `
-    <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? ""}</div>
-    <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
-    <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
-    <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
-      "he-IL",
-      { hour12: false }
-    )}</div>
-    <div><strong>סכום:</strong> ${formatCurrency(order.total)}</div>
-    <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
-    <div><strong>הערות מנהל:</strong> ${order.notes || "-"}</div>
-    <div><strong>הערות לקוח:</strong> ${order.user_notes || "-"}</div>
-    <div><strong>פריטים:</strong><br />${items || "-"}</div>
-  `;
-  orderDetailsModal.classList.remove("hidden");
+  if (orderDetailsContent) {
+    orderDetailsContent.innerHTML = `
+      <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? ""}</div>
+      <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
+      <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
+      <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
+        "he-IL",
+        { hour12: false }
+      )}</div>
+      <div><strong>סכום:</strong> ${formatCurrency(order.total)}</div>
+      <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
+      <div><strong>הערות מנהל:</strong> ${order.notes || "-"}</div>
+      <div><strong>הערות לקוח:</strong> ${order.user_notes || "-"}</div>
+      <div><strong>פריטים:</strong><br />${items || "-"}</div>
+    `;
+  }
+  orderDetailsModal?.classList.remove("hidden");
 };
 
-const openModal = (product) => {
+const openModal = (product: any) => {
   console.log("[openModal] Opening for product:", product);
   state.editingProductId = product.id;
-  modalTitle.value = product.title;
-  modalPrice.value = product.price;
-  const modalDiscount = document.getElementById("modal-discount");
+  if (modalTitle) modalTitle.value = product.title;
+  if (modalPrice) modalPrice.value = product.price;
+  const modalDiscount = document.getElementById("modal-discount") as HTMLInputElement | null;
   if (modalDiscount) {
-    modalDiscount.value = product.discountPercentage || 0;
+    modalDiscount.value = String(product.discountPercentage || 0);
   }
   const initialCategoryId = normalizeCategoryId(product.categoryId);
   console.log("[openModal] After normalizeProductId, initialCategoryId:", initialCategoryId);
   if (initialCategoryId) {
-    state.editingCategoryId = initialCategoryId;
+    state.editingCategoryId = String(initialCategoryId);
     console.log("[openModal] Using normalizedId, set state.editingCategoryId:", initialCategoryId);
   } else if (product.categoryName || product.category) {
     const match = state.categories.find(
       (item) => item.category_name === (product.categoryName || product.category)
     );
-    state.editingCategoryId = match ? match.category_id : null;
+    state.editingCategoryId = match ? String(match.category_id) : null;
     console.log("[openModal] Looked up by name, state.editingCategoryId:", state.editingCategoryId);
   } else {
     state.editingCategoryId = null;
@@ -2189,23 +2203,23 @@ const openModal = (product) => {
     getCategoryLabel(product),
     state.editingCategoryId
   );
-  modalImage.value = "";
-  modalStock.checked = product.inStock;
+  if (modalImage) modalImage.value = "";
+  if (modalStock) modalStock.checked = product.inStock;
   if (modalStatus) {
     modalStatus.textContent = "";
     modalStatus.className = "text-sm mt-2";
   }
-  productModal.classList.remove("hidden");
+  productModal?.classList.remove("hidden");
 };
 
 const closeModal = () => {
-  productModal.classList.add("hidden");
+  productModal?.classList.add("hidden");
   state.editingProductId = null;
 };
 
 const openCreateProductModal = () => {
-  if (!state.creatingCategoryId && state.categories.length) {
-    state.creatingCategoryId = state.categories[0].category_id;
+  if (!state.creatingCategoryId && state.categories.length && state.categories[0]) {
+    state.creatingCategoryId = String(state.categories[0].category_id);
     setCategoryTriggerLabel(
       createCategoryTrigger,
       state.categories[0].category_name,
@@ -2213,11 +2227,11 @@ const openCreateProductModal = () => {
     );
   }
   ensureCategoryOptions();
-  createModal.classList.remove("hidden");
+  createModal?.classList.remove("hidden");
 };
 
 const openCategoryModal = () => {
-  categoryModal.classList.remove("hidden");
+  categoryModal?.classList.remove("hidden");
   if (categoryStatus) {
     categoryStatus.textContent = "";
     categoryStatus.className = "text-sm mt-2";
@@ -2225,13 +2239,13 @@ const openCategoryModal = () => {
 };
 
 const closeCategoryModal = () => {
-  categoryModal.classList.add("hidden");
+  categoryModal?.classList.add("hidden");
 };
 
-const openCategoryEditModal = (category) => {
+const openCategoryEditModal = (category: any) => {
   if (!categoryEditModal) return;
   state.editingCategoryRowId = category.category_id;
-  categoryEditNameInput.value = category.category_name;
+  if (categoryEditNameInput) categoryEditNameInput.value = category.category_name;
   if (categoryEditImageInput) {
     categoryEditImageInput.value = "";
   }
@@ -2263,7 +2277,7 @@ const handleUpdateCategory = async () => {
   if (!ensureAdmin()) return;
   if (!state.editingCategoryRowId) return;
 
-  const name = categoryEditNameInput.value.trim();
+  const name = categoryEditNameInput?.value.trim() || "";
   if (!name) {
     if (categoryEditStatus) {
       categoryEditStatus.textContent = "יש להזין שם קטגוריה.";
@@ -2296,6 +2310,7 @@ const handleUpdateCategory = async () => {
   let imageUrl = category?.image_url || "assets/all_categories.png";
   if (categoryEditImageInput?.files?.length) {
     const file = categoryEditImageInput.files[0];
+    if (!file) return;
     const uploadedUrl = await uploadCategoryImage(file, name || "category");
     if (!uploadedUrl) {
       if (categoryEditStatus) {
@@ -2364,7 +2379,7 @@ const handleUpdateCategory = async () => {
 const handleCreateCategory = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
-  const name = categoryNameInput.value.trim();
+  const name = categoryNameInput?.value.trim() || "";
   if (!name) {
     if (categoryStatus) {
       categoryStatus.textContent = "יש להזין שם קטגוריה.";
@@ -2390,6 +2405,7 @@ const handleCreateCategory = async () => {
   let imageUrl = "assets/all_categories.png";
   if (categoryImageInput?.files?.length) {
     const file = categoryImageInput.files[0];
+    if (!file) return;
     const uploadedUrl = await uploadCategoryImage(file, name || "category");
     if (!uploadedUrl) {
       if (categoryStatus) {
@@ -2409,7 +2425,7 @@ const handleCreateCategory = async () => {
     }
     return;
   }
-  categoryNameInput.value = "";
+  if (categoryNameInput) categoryNameInput.value = "";
   if (categoryImageInput) {
     categoryImageInput.value = "";
   }
@@ -2424,7 +2440,7 @@ const handleCreateCategory = async () => {
   renderCategoryCarousel();
 };
 
-const handleDeleteCategory = async (categoryId) => {
+const handleDeleteCategory = async (categoryId: any) => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
   const normalizedId = Number(categoryId);
@@ -2504,47 +2520,47 @@ const confirmDeleteCategory = async () => {
 };
 
 const closeCreateModal = () => {
-  createModal.classList.add("hidden");
+  createModal?.classList.add("hidden");
 };
 
 const openOrderModal = () => {
-  orderModal.classList.remove("hidden");
+  orderModal?.classList.remove("hidden");
 };
 
 const closeOrderModal = () => {
-  orderModal.classList.add("hidden");
+  orderModal?.classList.add("hidden");
 };
 
-const openDeleteConfirm = (type = 'product', id = null, name = '') => {
+const openDeleteConfirm = (type: 'product' | 'category' = 'product', id: any = null, name = '') => {
   state.pendingDeleteType = type;
   state.pendingDeleteId = id;
   
-  const modalTitle = deleteConfirmModal.querySelector('.admin-title');
-  const modalMessage = deleteConfirmModal.querySelector('p');
+  const modalTitle = deleteConfirmModal?.querySelector('.admin-title');
+  const modalMessage = deleteConfirmModal?.querySelector('p');
   
   if (type === 'category') {
-    modalTitle.textContent = 'מחיקת קטגוריה';
-    modalMessage.textContent = name 
+    if (modalTitle) modalTitle.textContent = 'מחיקת קטגוריה';
+    if (modalMessage) modalMessage.textContent = name 
       ? `אתם בטוחים שתרצו למחוק את הקטגוריה "${name}"?`
       : 'למחוק את הקטגוריה?';
   } else {
-    modalTitle.textContent = 'מחיקת מוצר';
-    modalMessage.textContent = 'האם אתה בטוח שאתה רוצה למחוק את המוצר?';
+    if (modalTitle) modalTitle.textContent = 'מחיקת מוצר';
+    if (modalMessage) modalMessage.textContent = 'האם אתה בטוח שאתה רוצה למחוק את המוצר?';
   }
   
-  deleteConfirmModal.classList.remove("hidden");
+  deleteConfirmModal?.classList.remove("hidden");
 };
 
 const closeDeleteConfirm = () => {
-  deleteConfirmModal.classList.add("hidden");
+  deleteConfirmModal?.classList.add("hidden");
   state.pendingDeleteType = null;
   state.pendingDeleteId = null;
 };
 
-const openNotesPopover = (inputEl) => {
+const openNotesPopover = (inputEl: HTMLElement) => {
   if (!inputEl) return;
   activeNotesInput = inputEl;
-  notesTextarea.value = inputEl.value || "";
+  if (notesTextarea) notesTextarea.value = (inputEl as HTMLInputElement).value || "";
   const rect = inputEl.getBoundingClientRect();
   const popoverWidth = Math.min(360, window.innerWidth - 24);
   const popoverHeight = 220;
@@ -2556,7 +2572,7 @@ const openNotesPopover = (inputEl) => {
   notesPopover.style.top = `${Math.max(top, 12)}px`;
   notesPopover.style.left = `${Math.max(left, 12)}px`;
   notesPopover.classList.remove("hidden");
-  requestAnimationFrame(() => notesTextarea.focus());
+  requestAnimationFrame(() => notesTextarea?.focus());
 };
 
 const closeNotesPopover = (shouldSave = false) => {
@@ -2565,8 +2581,8 @@ const closeNotesPopover = (shouldSave = false) => {
     return;
   }
   if (shouldSave) {
-    const trimmed = notesTextarea.value.trim();
-    activeNotesInput.value = trimmed;
+    const trimmed = notesTextarea?.value.trim() || "";
+    (activeNotesInput as HTMLInputElement).value = trimmed;
     updateOrderField(activeNotesInput.dataset.orderId, "notes", trimmed);
   }
   notesPopover.classList.add("hidden");
@@ -2578,15 +2594,15 @@ const setupListeners = () => {
   if (siteLogoEl) {
     siteLogoEl.addEventListener("click", () => {
       window.location.hash = "#";
-      document.getElementById("catalog").scrollIntoView({ behavior: "smooth" });
+      document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
     });
   }
 
-  const updateSortIndicators = (tableEl, sortState) => {
+  const updateSortIndicators = (tableEl: HTMLElement | null, sortState: any) => {
     if (!tableEl) return;
     tableEl
       .querySelectorAll("th[data-sort]")
-      .forEach((header) => {
+      .forEach((header: any) => {
         if (header.dataset.sort === sortState.key) {
           header.dataset.sortDir = sortState.dir;
         } else {
@@ -2595,37 +2611,37 @@ const setupListeners = () => {
       });
   };
 
-  adminProductsTable.addEventListener("click", (event) => {
-    const header = event.target.closest("th[data-sort]");
+  adminProductsTable?.addEventListener("click", (event) => {
+    const header = (event.target as HTMLElement | null)?.closest("th[data-sort]");
     if (!header) return;
-    const key = header.dataset.sort;
+    const key = (header as HTMLElement).dataset.sort;
     if (state.sortProducts.key === key) {
       state.sortProducts.dir = state.sortProducts.dir === "asc" ? "desc" : "asc";
     } else {
-      state.sortProducts.key = key;
+      state.sortProducts.key = key || "";
       state.sortProducts.dir = "asc";
     }
     updateSortIndicators(adminProductsTable, state.sortProducts);
     renderAdmin();
   });
 
-  adminOrdersTable.addEventListener("click", (event) => {
-    const header = event.target.closest("th[data-sort]");
+  adminOrdersTable?.addEventListener("click", (event) => {
+    const header = (event.target as HTMLElement | null)?.closest("th[data-sort]");
     if (!header) return;
-    const key = header.dataset.sort;
+    const key = (header as HTMLElement).dataset.sort;
     if (state.sortOrders.key === key) {
       state.sortOrders.dir = state.sortOrders.dir === "asc" ? "desc" : "asc";
     } else {
-      state.sortOrders.key = key;
+      state.sortOrders.key = key || "";
       state.sortOrders.dir = "asc";
     }
     updateSortIndicators(adminOrdersTable, state.sortOrders);
     renderAdmin();
   });
   document.addEventListener("click", (event) => {
-    const button = event.target.closest("button");
+    const button = (event.target as HTMLElement | null)?.closest("button");
     if (button) {
-      if (button.dataset.action === "add") {
+      if ((button as HTMLElement).dataset.action === "add") {
         addToCart(button.dataset.id);
       }
 
@@ -2638,10 +2654,10 @@ const setupListeners = () => {
       }
     }
 
-    const row = event.target.closest("tr");
-    if (row && row.dataset.id && row.parentElement === adminProductsEl) {
+    const row = (event.target as HTMLElement | null)?.closest("tr");
+    if (row && (row as HTMLElement).dataset.id && row.parentElement === adminProductsEl) {
       const product = state.products.find(
-        (item) => String(item.id) === row.dataset.id
+        (item) => String(item.id) === (row as HTMLElement).dataset.id
       );
       if (product) {
         openModal(product);
@@ -2651,19 +2667,19 @@ const setupListeners = () => {
 
   if (adminCategoriesEl) {
     adminCategoriesEl.addEventListener("click", (event) => {
-      const deleteButton = event.target.closest(
+      const deleteButton = (event.target as HTMLElement | null)?.closest(
         "button[data-action='delete-category']"
       );
       if (deleteButton) {
-        const row = event.target.closest("tr");
-        if (!row || !row.dataset.categoryId) return;
-        handleDeleteCategory(row.dataset.categoryId);
+        const row = (event.target as HTMLElement | null)?.closest("tr");
+        if (!row || !(row as HTMLElement).dataset.categoryId) return;
+        handleDeleteCategory((row as HTMLElement).dataset.categoryId);
         return;
       }
-      const row = event.target.closest("tr");
-      if (!row || !row.dataset.categoryId) return;
+      const row = (event.target as HTMLElement | null)?.closest("tr");
+      if (!row || !(row as HTMLElement).dataset.categoryId) return;
       const category = state.categories.find(
-        (item) => String(item.category_id) === String(row.dataset.categoryId)
+        (item) => String(item.category_id) === String((row as HTMLElement).dataset.categoryId)
       );
       if (category) {
         openCategoryEditModal(category);
@@ -2671,29 +2687,29 @@ const setupListeners = () => {
     });
   }
 
-  document.getElementById("close-cart").addEventListener("click", closeCart);
-  overlay.addEventListener("click", closeCart);
-  floatingCart.addEventListener("click", openCart);
+  document.getElementById("close-cart")?.addEventListener("click", closeCart);
+  overlay?.addEventListener("click", closeCart);
+  floatingCart?.addEventListener("click", openCart);
 
   document
     .getElementById("checkout-scroll")
-    .addEventListener("click", () => {
+    ?.addEventListener("click", () => {
       closeCart();
       setTimeout(() => {
         const checkoutSection = document.getElementById("checkout");
-        checkoutSection.scrollIntoView({
+        checkoutSection?.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
         // Focus first input to ensure keyboard appears on mobile
-        const firstInput = checkoutSection.querySelector("input");
-        if (firstInput) firstInput.focus();
+        const firstInput = checkoutSection?.querySelector("input");
+        if (firstInput) (firstInput as HTMLInputElement).focus();
       }, 300);
     });
 
   document
     .getElementById("checkout-form")
-    .addEventListener("submit", handleCheckout);
+    ?.addEventListener("submit", handleCheckout);
 
   if (pickupDateInput) {
     pickupDateInput.addEventListener("change", validateAndFixPickupDate);
@@ -2739,18 +2755,18 @@ const setupListeners = () => {
     });
   }
 
-  adminNewOrderButton.addEventListener("click", openOrderModal);
-  orderModalClose.addEventListener("click", closeOrderModal);
-  orderSave.addEventListener("click", handleCreateOrder);
-  orderDetailsClose.addEventListener("click", () => {
-    orderDetailsModal.classList.add("hidden");
+  adminNewOrderButton?.addEventListener("click", openOrderModal);
+  orderModalClose?.addEventListener("click", closeOrderModal);
+  orderSave?.addEventListener("click", handleCreateOrder);
+  orderDetailsClose?.addEventListener("click", () => {
+    orderDetailsModal?.classList.add("hidden");
   });
 
-  adminOrdersEl.addEventListener("change", (event) => {
-    const target = event.target;
-    const field = target.dataset.orderField;
-    const id = target.dataset.orderId;
-    if (!field || !id) return;
+  adminOrdersEl?.addEventListener("change", (event) => {
+    const target = event.target as HTMLInputElement | null;
+    const field = target?.dataset.orderField;
+    const id = target?.dataset.orderId;
+    if (!field || !id || !target) return;
 
     if (field === "paid") {
       updateOrderField(id, "paid", target.checked);
@@ -2768,37 +2784,37 @@ const setupListeners = () => {
     }
   });
 
-  adminOrdersEl.addEventListener(
+  adminOrdersEl?.addEventListener(
     "click",
     (event) => {
-      const notesInput = event.target.closest(
+      const notesInput = (event.target as HTMLElement | null)?.closest(
         'input[data-order-field="notes"]'
       );
       if (notesInput) {
         event.preventDefault();
         event.stopPropagation();
-        openNotesPopover(notesInput);
+        openNotesPopover(notesInput as HTMLElement);
         return;
       }
     },
     true
   );
 
-  adminOrdersEl.addEventListener("click", (event) => {
-    if (event.target.closest("input")) return;
-    const row = event.target.closest("tr");
-    if (!row || !row.dataset.orderId) return;
-    const order = state.orders.find((item) => item.id === row.dataset.orderId);
+  adminOrdersEl?.addEventListener("click", (event) => {
+    if ((event.target as HTMLElement | null)?.closest("input")) return;
+    const row = (event.target as HTMLElement | null)?.closest("tr");
+    if (!row || !(row as HTMLElement).dataset.orderId) return;
+    const order = state.orders.find((item) => String(item.id) === (row as HTMLElement).dataset.orderId);
     if (!order) return;
     showOrderDetails(order);
   });
 
   document.addEventListener("click", (event) => {
     if (notesPopover.classList.contains("hidden")) return;
-    const isNotesInput = event.target.closest(
+    const isNotesInput = (event.target as HTMLElement | null)?.closest(
       'input[data-order-field="notes"]'
     );
-    if (notesPopover.contains(event.target) || isNotesInput) return;
+    if (notesPopover.contains(event.target as Node) || isNotesInput) return;
     closeNotesPopover(true);
   });
   document.addEventListener("keydown", (event) => {
@@ -2807,8 +2823,8 @@ const setupListeners = () => {
     }
   });
 
-  adminSearchInput.addEventListener("input", renderAdmin);
-  adminOrdersSearchInput.addEventListener("input", renderAdmin);
+  adminSearchInput?.addEventListener("input", renderAdmin);
+  adminOrdersSearchInput?.addEventListener("input", renderAdmin);
   if (productSearchInput) {
     productSearchInput.addEventListener("input", renderProducts);
   }
@@ -2817,7 +2833,7 @@ const setupListeners = () => {
   }
   if (ordersAcceptingToggle) {
     ordersAcceptingToggle.addEventListener("change", (e) => {
-      const accepting = e.target.checked;
+      const accepting = (e.target as HTMLInputElement).checked;
       if (ordersAcceptingLabel) {
         ordersAcceptingLabel.textContent = accepting ? 'פתוח' : 'סגור';
       }
@@ -2832,17 +2848,17 @@ const setupListeners = () => {
   }
   if (adminHeroBadgeInput) {
     adminHeroBadgeInput.addEventListener("input", (e) => {
-      state.heroBadge = e.target.value;
+      state.heroBadge = (e.target as HTMLInputElement).value;
     });
   }
   if (adminHeroTitleInput) {
     adminHeroTitleInput.addEventListener("input", (e) => {
-      state.heroTitle = e.target.value;
+      state.heroTitle = (e.target as HTMLInputElement).value;
     });
   }
   if (adminHeroDescriptionInput) {
     adminHeroDescriptionInput.addEventListener("input", (e) => {
-      state.heroDescription = e.target.value;
+      state.heroDescription = (e.target as HTMLTextAreaElement).value;
     });
   }
   if (adminHeroAddChipBtn) {
@@ -2861,13 +2877,13 @@ const setupListeners = () => {
   // Logo replacement button and file input handlers
   if (adminLogoReplaceBtn) {
     adminLogoReplaceBtn.addEventListener("click", () => {
-      adminLogoInput.click();
+      adminLogoInput?.click();
     });
   }
   
   if (adminLogoInput) {
     adminLogoInput.addEventListener("change", async (event) => {
-      const file = event.target.files[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         await saveLogoImage(file);
       }
@@ -2876,24 +2892,24 @@ const setupListeners = () => {
   
   if (adminHeroImageFile) {
     adminHeroImageFile.addEventListener("change", async (event) => {
-      const file = event.target.files[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         await saveHeroImage(file);
       }
     });
   }
   
-  modalSave.addEventListener("click", handleAdminChange);
-  modalClose.addEventListener("click", closeModal);
-  modalDelete.addEventListener("click", () => {
+  modalSave?.addEventListener("click", handleAdminChange);
+  modalClose?.addEventListener("click", closeModal);
+  modalDelete?.addEventListener("click", () => {
     if (state.editingProductId) {
       openDeleteConfirm();
     }
   });
 
-  deleteConfirmClose.addEventListener("click", closeDeleteConfirm);
-  deleteConfirmNo.addEventListener("click", closeDeleteConfirm);
-  deleteConfirmYes.addEventListener("click", async () => {
+  deleteConfirmClose?.addEventListener("click", closeDeleteConfirm);
+  deleteConfirmNo?.addEventListener("click", closeDeleteConfirm);
+  deleteConfirmYes?.addEventListener("click", async () => {
     console.log("[deleteConfirmYes] Clicked. Pending delete:", { type: state.pendingDeleteType, id: state.pendingDeleteId });
     
     if (state.pendingDeleteType === 'category' && state.pendingDeleteId) {
@@ -2904,41 +2920,41 @@ const setupListeners = () => {
     closeDeleteConfirm();
   });
 
-  openCreateModal.addEventListener("click", openCreateProductModal);
-  createModalClose.addEventListener("click", closeCreateModal);
-  createSave.addEventListener("click", handleCreateProduct);
+  openCreateModal?.addEventListener("click", openCreateProductModal);
+  createModalClose?.addEventListener("click", closeCreateModal);
+  createSave?.addEventListener("click", handleCreateProduct);
 
-  modalCategoryTrigger.addEventListener("click", () => {
-    modalCategoryDropdown.classList.toggle("open");
+  modalCategoryTrigger?.addEventListener("click", () => {
+    modalCategoryDropdown?.classList.toggle("open");
   });
-  createCategoryTrigger.addEventListener("click", () => {
-    createCategoryDropdown.classList.toggle("open");
+  createCategoryTrigger?.addEventListener("click", () => {
+    createCategoryDropdown?.classList.toggle("open");
   });
-  modalCategorySearch.addEventListener("input", () =>
+  modalCategorySearch?.addEventListener("input", () =>
     renderCategoryDropdown(modalCategoryDropdown, {
       searchInput: modalCategorySearch,
       listEl: modalCategoryList,
       getSelectedId: () => state.editingCategoryId,
-      setSelectedId: (id) => {
+      setSelectedId: (id: any) => {
         state.editingCategoryId = id;
       },
       triggerEl: modalCategoryTrigger,
     })
   );
-  createCategorySearch.addEventListener("input", () =>
+  createCategorySearch?.addEventListener("input", () =>
     renderCategoryDropdown(createCategoryDropdown, {
       searchInput: createCategorySearch,
       listEl: createCategoryList,
       getSelectedId: () => state.creatingCategoryId,
-      setSelectedId: (id) => {
+      setSelectedId: (id: any) => {
         state.creatingCategoryId = id;
       },
       triggerEl: createCategoryTrigger,
     })
   );
 
-  categoryModalClose.addEventListener("click", closeCategoryModal);
-  categorySave.addEventListener("click", handleCreateCategory);
+  categoryModalClose?.addEventListener("click", closeCategoryModal);
+  categorySave?.addEventListener("click", handleCreateCategory);
   if (adminCreateCategoryButton) {
     adminCreateCategoryButton.addEventListener("click", openCategoryModal);
   }
@@ -2952,14 +2968,14 @@ const setupListeners = () => {
 
   document.addEventListener("click", (event) => {
     if (
-      !modalCategoryDropdown.contains(event.target) &&
-      modalCategoryDropdown.classList.contains("open")
+      !modalCategoryDropdown?.contains(event.target as Node) &&
+      modalCategoryDropdown?.classList.contains("open")
     ) {
       modalCategoryDropdown.classList.remove("open");
     }
     if (
-      !createCategoryDropdown.contains(event.target) &&
-      createCategoryDropdown.classList.contains("open")
+      !createCategoryDropdown?.contains(event.target as Node) &&
+      createCategoryDropdown?.classList.contains("open")
     ) {
       createCategoryDropdown.classList.remove("open");
     }
@@ -2967,9 +2983,9 @@ const setupListeners = () => {
 
   document
     .getElementById("admin-login-form")
-    .addEventListener("submit", handleAdminLogin);
+    ?.addEventListener("submit", handleAdminLogin);
 
-  adminLogoutButton.addEventListener("click", handleLogout);
+  adminLogoutButton?.addEventListener("click", handleLogout);
 
   window.addEventListener("hashchange", updateRoute);
 };
@@ -3017,7 +3033,7 @@ const init = async () => {
   renderProducts();
   updateCartUI();
   if (supabaseClient) {
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabaseClient.auth.onAuthStateChange((_event: any, session: any) => {
       state.session = session;
     });
   }
@@ -3028,8 +3044,8 @@ const init = async () => {
     productHeaders
       .querySelectorAll("th[data-sort]")
       .forEach((header) => {
-        if (header.dataset.sort === state.sortProducts.key) {
-          header.dataset.sortDir = state.sortProducts.dir;
+        if ((header as HTMLElement).dataset.sort === state.sortProducts.key) {
+          (header as HTMLElement).dataset.sortDir = state.sortProducts.dir;
         }
       });
   }
@@ -3037,8 +3053,8 @@ const init = async () => {
     orderHeaders
       .querySelectorAll("th[data-sort]")
       .forEach((header) => {
-        if (header.dataset.sort === state.sortOrders.key) {
-          header.dataset.sortDir = state.sortOrders.dir;
+        if ((header as HTMLElement).dataset.sort === state.sortOrders.key) {
+          (header as HTMLElement).dataset.sortDir = state.sortOrders.dir;
         }
       });
   }
