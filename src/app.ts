@@ -44,7 +44,7 @@ declare global {
 let supabaseClient:any = null;
 let storageService: StorageService | null = null;
 // @ts-expect-error - Declared for future use
-let productService: ProductService | null = null; // Declared for future use
+let _productService: ProductService | null = null; // Declared for future use
 
 // Use store-managed state (backward compatible access pattern)
 // Direct mutations still work, but actions are preferred for new code
@@ -2056,7 +2056,7 @@ const saveContactInfo = async () => {
 };
 
 // @ts-expect-error - Function declared for future use
-const fetchFeaturedProducts = async () => {
+const _fetchFeaturedProducts = async () => {
   if (!ensureSupabase()) return;
   if (!state.siteMetaId) {
     console.warn("[fetchFeaturedProducts] No siteMetaId set");
@@ -2997,7 +2997,7 @@ const init = async () => {
   // Initialize services if client is available
   if (supabaseClient) {
     storageService = new StorageService(supabaseClient);
-    productService = new ProductService(supabaseClient);
+    _productService = new ProductService(supabaseClient);
   }
   
   setupListeners();
