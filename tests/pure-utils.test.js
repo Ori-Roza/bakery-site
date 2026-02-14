@@ -5,7 +5,7 @@ const loadApp = async () => {
   vi.resetModules();
   window.__DISABLE_AUTO_INIT__ = true;
   window.__SUPABASE_CLIENT__ = await createSqliteSupabaseClient();
-  return import("../assets/app.ts");
+  return import("../src/app.ts");
 };
 
 describe("app utilities", () => {

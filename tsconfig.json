@@ -21,9 +21,9 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./assets/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["assets/**/*", "tests/**/*", "*.ts"],
+  "include": ["src/**/*", "tests/**/*", "*.ts"],
   "exclude": ["node_modules", "dist"]
 }
