@@ -1985,7 +1985,6 @@ const _fetchFeaturedProducts = async () => {
   }
 
   state.featuredProductIds = (data || []).map((item: any) => item.product_id);
-  renderFeaturedProductsCheckboxes();
 };
 
 const fetchOrders = async () => {
