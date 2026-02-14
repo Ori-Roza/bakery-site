@@ -9,11 +9,17 @@ const pickNextBusinessSlot = (app) => {
     date.setDate(date.getDate() + 1);
     date.setHours(6, 0, 0, 0);
   }
-  date.setHours(10, 0, 0, 0);
+  // Round up to next hour to ensure pickup time is after minimum  
+  // If we have minutes/seconds, add an hour
+  if (date.getMinutes() > 0 || date.getSeconds() > 0) {
+    date.setHours(date.getHours() + 1);
+  }
+  date.setMinutes(0, 0, 0);
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
-  return { date: `${yyyy}-${mm}-${dd}`, time: "10:00" };
+  const hh = String(date.getHours()).padStart(2, "0");
+  return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:00` };
 };
 
 describe("storefront", () => {
