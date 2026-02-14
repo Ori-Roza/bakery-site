@@ -6,14 +6,15 @@
  * Product model
  */
 export interface Product {
-  id: number;
+  id: number | string;
   title: string;
   price: number;
   discountPercentage: number;
-  categoryId: number | null;
+  categoryId: number | string | null;
   categoryName?: string;
   image: string;
   inStock: boolean;
+  [key: string]: any; // Allow dynamic property access for sorting
 }
 
 /**
@@ -38,7 +39,8 @@ export interface ProductDbRow {
  * Category model
  */
 export interface Category {
-  category_id: number;
+  id?: number;
+  category_id: number | string;
   category_name: string;
   image_url?: string;
 }
@@ -57,16 +59,25 @@ export interface CategoryDbRow {
  */
 export interface Order {
   id: number;
-  customer_name: string;
-  customer_phone: string;
-  pickup_date: string;
-  pickup_time: string;
-  total_price: number;
+  customer_name?: string;
+  customer_phone?: string;
+  customer?: {
+    name: string;
+    phone: string;
+  };
+  pickup_date?: string;
+  pickup_time?: string;
+  total_price?: number;
+  total?: number;
   paid: boolean;
   notes?: string;
+  user_notes?: string;
+  order_number?: number | string;
   items: OrderItem[];
   created_at: string;
   deleted?: boolean;
+  status?: string;
+  [key: string]: any; // Allow dynamic property access for sorting
 }
 
 /**
@@ -83,11 +94,23 @@ export interface OrderItem {
  * Cart item
  */
 export interface CartItem {
-  id: number;
+  id: number | string;
   title: string;
   price: number;
+  discountPercentage?: number;
+  discountedPrice?: number;
+  image?: string;
   qty: number;
   lineTotal: number;
+}
+
+/**
+ * Cart totals
+ */
+export interface CartTotals {
+  items: CartItem[];
+  totalQty: number;
+  totalPrice: number;
 }
 
 /**
@@ -137,12 +160,12 @@ export interface AppState {
   orders: Order[];
   session: any | null;
   role: string | null;
-  editingProductId: number | null;
+  editingProductId: string | null;
   sortProducts: SortConfig;
   sortOrders: SortConfig;
   categories: Category[];
-  editingCategoryId: number | null;
-  creatingCategoryId: number | null;
+  editingCategoryId: string | null;
+  creatingCategoryId: string | null;
   siteMetaId: number | null;
   featuredProducts: Product[];
   featuredProductIds: number[];
@@ -151,15 +174,15 @@ export interface AppState {
   heroBadge: string;
   heroTitle: string;
   heroDescription: string;
-  activeCategoryId: number | null;
+  activeCategoryId: string | null;
   checkoutWhatsappPhone: string;
   pendingDeleteType: 'product' | 'category' | null;
-  pendingDeleteId: number | null;
+  pendingDeleteId: string | number | null;
   checkoutEmail: string;
   storePhone: string;
   bakeryPhone: string;
   pendingOrderLinks: { whatsappUrl: string; emailUrl: string } | null;
-  editingCategoryRowId: number | null;
+  editingCategoryRowId: string | null;
   ordersAccepting: boolean;
 }
 
@@ -173,6 +196,7 @@ export interface OrderMessageParams {
   time: string;
   items: OrderItem[];
   totalPrice: number;
+  userNotes?: string;
 }
 
 /**

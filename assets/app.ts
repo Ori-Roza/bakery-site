@@ -1,15 +1,10 @@
-import { formatCurrency, formatDateForInput, formatTimeForInput } from './utils/formatters';
-import { bufferToHex, hexToBase64, sanitizeFileName } from './utils/data-converters';
+import { formatCurrency, formatDateForInput } from './utils/formatters';
 import { 
-  BUSINESS_HOURS,
-  isBusinessDay, 
-  isWithinBusinessHours, 
   getNextBusinessDateTime,
   getPickupDateTime 
 } from './utils/business-hours';
 import {
   CONTACT_PHONE,
-  CONTACT_PHONE_INTL,
   CONTACT_EMAIL,
   DEFAULT_WHATSAPP_PHONE,
   DEFAULT_ORDER_EMAIL,
@@ -18,27 +13,37 @@ import {
   CUSTOMER_PHONE_REQUIRED,
   DEFAULT_ABOUT
 } from './config/constants';
-import type { AppState, Product, Category, Order, OrderMessageParams, OrderLinks, CartItem } from './types/models';
+import type { AppState } from './types/models';
 import { store, getState } from './store/state';
 import * as actions from './store/actions';
 import { ProductMapper } from './models/ProductMapper';
 import { CategoryMapper } from './models/CategoryMapper';
-import { OrderMapper } from './models/OrderMapper';
-import { createSupabaseClient, getInjectedSupabaseClient } from './services/SupabaseClient';
+import { createSupabaseClient } from './services/SupabaseClient';
 import { StorageService } from './services/StorageService';
 import { ProductService } from './services/ProductService';
+import { CartManager } from './business/CartManager';
+import { CheckoutValidator } from './business/CheckoutValidator';
+// import { CategoryResolver } from './business/CategoryResolver'; // Unused - for future use
+import { OrderBuilder } from './business/OrderBuilder';
+import { CategoryUI } from './ui/CategoryUI';
+// import { CartUI } from './ui/CartUI'; // Unused - for future use
+// import { ProductUI } from './ui/ProductUI'; // Unused - for future use
+// import { AdminUI } from './ui/AdminUI'; // Unused - for future use
+// import { ModalUI } from './ui/ModalUI'; // Unused - for future use
+// import { CartHandlers } from './handlers/CartHandlers'; // Unused - for future use
+// import { CheckoutHandlers } from './handlers/CheckoutHandlers'; // Unused - for future use
 
-let supabaseClient = null;
+let supabaseClient:any = null;
 let storageService: StorageService | null = null;
 let productService: ProductService | null = null;
 
 // Use store-managed state (backward compatible access pattern)
 // Direct mutations still work, but actions are preferred for new code
 const state = new Proxy({} as AppState, {
-  get(target, prop) {
+  get(_target, prop) {
     return getState()[prop as keyof AppState];
   },
-  set(target, prop, value) {
+  set(_target, prop, value) {
     store.setState({ [prop]: value } as any);
     return true;
   }
@@ -46,8 +51,7 @@ const state = new Proxy({} as AppState, {
 
 const categoryTrackEl = document.getElementById("category-track");
 const productsScrollEl = document.getElementById("products-scroll");
-const productsHeadingEl = document.getElementById("products-heading");
-const productSearchInput = document.getElementById("product-search");
+const productSearchInput = document.getElementById("product-search") as HTMLInputElement | null;
 const cartDrawer = document.getElementById("cart-drawer");
 const cartItemsEl = document.getElementById("cart-items");
 const cartTotalEl = document.getElementById("cart-total");
@@ -65,9 +69,8 @@ const adminGreetingEl = document.getElementById("admin-greeting");
 const adminLogoutButton = document.getElementById("admin-logout");
 const adminNewOrderButton = document.getElementById("admin-new-order");
 const adminProductsTable = document.getElementById("admin-products-table");
-const adminCategoriesTable = document.getElementById("admin-categories-table");
 const adminOrdersTable = document.getElementById("admin-orders-table");
-const adminOrdersSearchInput = document.getElementById("admin-orders-search");
+const adminOrdersSearchInput = document.getElementById("admin-orders-search") as HTMLInputElement | null;
 const orderDetailsModal = document.getElementById("order-details-modal");
 const orderDetailsClose = document.getElementById("order-details-close");
 const orderDetailsContent = document.getElementById("order-details-content");
@@ -76,9 +79,9 @@ const adminAboutInput = document.getElementById("admin-about");
 const adminAboutSave = document.getElementById("admin-about-save");
 const adminAboutStatus = document.getElementById("admin-about-status");
 const checkoutError = document.getElementById("checkout-error");
-const checkoutForm = document.getElementById("checkout-form");
-const customerNameInput = document.getElementById("customer-name");
-const customerPhoneInput = document.getElementById("customer-phone");
+const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
+const customerNameInput = document.getElementById("customer-name") as HTMLInputElement | null;
+const customerPhoneInput = document.getElementById("customer-phone") as HTMLInputElement | null;
 const orderModal = document.getElementById("order-modal");
 const orderModalClose = document.getElementById("order-modal-close");
 const orderSave = document.getElementById("order-save");
@@ -91,7 +94,7 @@ const orderDate = document.getElementById("order-date");
 const orderTotal = document.getElementById("order-total");
 const orderPaid = document.getElementById("order-paid");
 const orderNotes = document.getElementById("order-notes");
-const adminSearchInput = document.getElementById("admin-search");
+const adminSearchInput = document.getElementById("admin-search") as HTMLInputElement | null;
 const adminCategoriesEl = document.getElementById("admin-categories");
 const adminCreateCategoryButton = document.getElementById("admin-create-category");
 const ordersAcceptingToggle = document.getElementById("orders-accepting-toggle");
@@ -170,8 +173,8 @@ const adminContactEmailInput = document.getElementById("admin-contact-email");
 const adminContactAddressInput = document.getElementById("admin-contact-address");
 const adminContactSave = document.getElementById("admin-contact-save");
 const adminContactStatus = document.getElementById("admin-contact-status");
-const pickupDateInput = document.getElementById("pickup-date");
-const pickupTimeInput = document.getElementById("pickup-time");
+const pickupDateInput = document.getElementById("pickup-date") as HTMLInputElement | null;
+const pickupTimeInput = document.getElementById("pickup-time") as HTMLInputElement | null;
 const orderChannelModal = document.getElementById("order-channel-modal");
 const orderChannelClose = document.getElementById("order-channel-close");
 const orderChannelWhatsapp = document.getElementById("order-channel-whatsapp");
@@ -186,36 +189,38 @@ notesPopover.innerHTML = `
   </div>
 `;
 document.body.appendChild(notesPopover);
-const notesTextarea = notesPopover.querySelector(".notes-textarea");
-let activeNotesInput = null;
+const notesTextarea = notesPopover.querySelector(".notes-textarea") as HTMLTextAreaElement | null;
+let activeNotesInput: HTMLElement | null = null;
 
 // Data mapping functions (use mapper classes)
-const mapDbToProduct = (row) => ProductMapper.mapDbToProduct(row);
+const mapDbToProduct = (row: any) => ProductMapper.mapDbToProduct(row);
 
-const mapProductToDb = (product, { includeId = false } = {}) => {
+const mapProductToDb = (product: any, { includeId = false } = {}) => {
   return ProductMapper.mapProductToDb(product, {
     includeId,
     normalizeCategoryId: (value) => CategoryMapper.normalizeCategoryId(value, state.categories)
   });
 };
 
-const getCategoryLabel = (product) => {
+const getCategoryLabel = (product: any) => {
   return ProductMapper.getCategoryLabel(product, state.categories);
 };
 
-const normalizeCategoryId = (value) => {
-  return CategoryMapper.normalizeCategoryId(value, state.categories);
+const normalizeCategoryId = (value: any): any => {
+  const result = CategoryMapper.normalizeCategoryId(value, state.categories);
+  return result;
 };
 
-const normalizeProductId = (value) => {
-  return CategoryMapper.normalizeProductId(value);
+const normalizeProductId = (value: any): any => {
+  const result = CategoryMapper.normalizeProductId(value);
+  return result;
 };
 
-const getCategoryThumbnail = (categoryId) => {
-  return CategoryMapper.getCategoryThumbnail(categoryId, state.categories);
-};
+// const getCategoryThumbnail = (categoryId: any) => { // Unused - for future use
+//   return CategoryMapper.getCategoryThumbnail(categoryId, state.categories);
+// };
 
-const showTechErrorStatus = (element) => {
+const showTechErrorStatus = (element: any) => {
   if (!element) return;
   element.textContent = TECH_SUPPORT_MESSAGE;
   element.className = "text-sm mt-2 text-rose-600";
@@ -231,11 +236,8 @@ const updatePickupConstraints = () => {
 
   // Check if user selected a date
   if (pickupDateInput.value) {
-    const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
-    const selectedDay = selectedDate.getDay();
-    
     // Check if Saturday (6) - not allowed
-    if (selectedDay === 6) {
+    if (CheckoutValidator.isSaturday(pickupDateInput.value)) {
       pickupDateInput.value = '';
       if (checkoutError) {
         checkoutError.textContent = "ביום שבת אנו סגורים. בחרו יום אחר.";
@@ -252,51 +254,20 @@ const updatePickupConstraints = () => {
 const setPickupValidity = () => {
   if (!pickupDateInput || !pickupTimeInput) return;
   
-  const pickupDateTime = getPickupDateTime(
+  const message = CheckoutValidator.getPickupValidityMessage(
     pickupDateInput.value,
     pickupTimeInput.value
   );
   
-  if (!pickupDateTime) {
-    pickupDateInput.setCustomValidity("יש לבחור תאריך ושעה");
-    pickupTimeInput.setCustomValidity("יש לבחור תאריך ושעה");
-    return;
-  }
-  
-  const now = new Date();
-  const minDateTime = getNextBusinessDateTime(now);
-  const day = pickupDateTime.getDay();
-  const hours = BUSINESS_HOURS.weekDays[day];
-  
-  // Check if Friday (5) or Saturday (6) - closed
-  if (!hours) {
-    const message = "ביום שבת אנו סגורים";
-    pickupDateInput.setCustomValidity(message);
-    pickupTimeInput.setCustomValidity(message);
-    return;
-  }
-  
-  // Check if 24 hours in advance
-  if (pickupDateTime < minDateTime) {
-    const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות מראש בשעות פעילות";
-    pickupDateInput.setCustomValidity(message);
-    pickupTimeInput.setCustomValidity(message);
-    return;
-  }
-  
-  // Valid
-  pickupDateInput.setCustomValidity("");
-  pickupTimeInput.setCustomValidity("");
+  pickupDateInput.setCustomValidity(message);
+  pickupTimeInput.setCustomValidity(message);
 };
 
 const validateAndFixPickupDate = () => {
   if (!pickupDateInput || !pickupDateInput.value) return;
   
-  const selectedDate = new Date(pickupDateInput.value + 'T00:00:00');
-  const selectedDay = selectedDate.getDay();
-  
   // Check if Saturday (6)
-  if (selectedDay === 6) {
+  if (CheckoutValidator.isSaturday(pickupDateInput.value)) {
     // Reset to empty
     pickupDateInput.value = '';
     alert("ביום שבת אנו סגורים. בחרו יום אחר.");
@@ -327,64 +298,15 @@ const setCustomerFieldValidity = () => {
   }
 };
 
-const setActiveCategory = (categoryId) => {
-  state.activeCategoryId = categoryId;
-  renderCategoryCarousel();
-  renderProducts();
-  const productsSection = productsHeadingEl || productsScrollEl;
-  if (productsSection) {
-    productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+const setActiveCategory = (categoryId: any) => {
+  CategoryUI.setActiveCategory(categoryId, state, {
+    renderCategoryCarousel,
+    renderProducts
+  });
 };
 
 const renderCategoryCarousel = () => {
-  if (!categoryTrackEl) return;
-
-  categoryTrackEl.innerHTML = "";
-
-  const allCard = document.createElement("button");
-  allCard.type = "button";
-  allCard.className = "carousel-card category-card";
-  if (!state.activeCategoryId) {
-    allCard.classList.add("active");
-  }
-  allCard.dataset.categoryId = "";
-  allCard.innerHTML = `
-    <div class="relative">
-      <img src="${getCategoryThumbnail(null)}" alt="כל הקטגוריות" />
-    </div>
-    <div class="carousel-content">
-      <h5 class="font-semibold text-lg">כל הקטגוריות</h5>
-      <p class="text-sm text-stone-500">הצגת כל המוצרים</p>
-    </div>
-  `;
-  allCard.addEventListener("click", () => setActiveCategory(null));
-  categoryTrackEl.appendChild(allCard);
-
-  const sortedCategories = [...state.categories].sort((a, b) =>
-    a.category_name.localeCompare(b.category_name, "he")
-  );
-
-  sortedCategories.forEach((category) => {
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "carousel-card category-card";
-    if (String(state.activeCategoryId) === String(category.category_id)) {
-      card.classList.add("active");
-    }
-    card.dataset.categoryId = category.category_id;
-    card.innerHTML = `
-      <div class="relative">
-        <img src="${getCategoryThumbnail(category.category_id)}" alt="${category.category_name}" />
-      </div>
-      <div class="carousel-content">
-        <h5 class="font-semibold text-lg">${category.category_name}</h5>
-        <p class="text-sm text-stone-500">מוצרים בקטגוריה זו</p>
-      </div>
-    `;
-    card.addEventListener("click", () => setActiveCategory(category.category_id));
-    categoryTrackEl.appendChild(card);
-  });
+  CategoryUI.renderCategoryCarousel(state, categoryTrackEl, setActiveCategory);
 };
 
 const ensureCategoryOptions = () => {
@@ -392,7 +314,7 @@ const ensureCategoryOptions = () => {
     searchInput: modalCategorySearch,
     listEl: modalCategoryList,
     getSelectedId: () => state.editingCategoryId,
-    setSelectedId: (id) => {
+    setSelectedId: (id: any) => {
       state.editingCategoryId = id;
     },
     triggerEl: modalCategoryTrigger,
@@ -402,14 +324,14 @@ const ensureCategoryOptions = () => {
     searchInput: createCategorySearch,
     listEl: createCategoryList,
     getSelectedId: () => state.creatingCategoryId,
-    setSelectedId: (id) => {
+    setSelectedId: (id: any) => {
       state.creatingCategoryId = id;
     },
     triggerEl: createCategoryTrigger,
   });
 };
 
-const renderCategoryDropdown = (dropdownEl, config) => {
+const renderCategoryDropdown = (dropdownEl: any, config: any) => {
   if (!dropdownEl) return;
   const { searchInput, listEl, getSelectedId, setSelectedId, triggerEl } = config;
   const query = searchInput?.value?.trim().toLowerCase() || "";
@@ -451,7 +373,7 @@ const renderCategoryDropdown = (dropdownEl, config) => {
   listEl.appendChild(createLink);
 };
 
-const setCategoryTriggerLabel = (triggerEl, label, selectedId = null) => {
+const setCategoryTriggerLabel = (triggerEl: any, label: any, selectedId: any = null) => {
   if (!triggerEl) return;
   triggerEl.textContent = label || "בחר קטגוריה";
   if (selectedId !== null && selectedId !== undefined) {
@@ -480,35 +402,18 @@ const ensureAdmin = () => {
   return true;
 };
 
-const getCartItems = () => {
-  return Object.entries(state.cart)
-    .map(([id, qty]) => {
-      const product = state.products.find(
-        (item) => String(item.id) === String(id)
-      );
-      if (!product) return null;
-      const discountedPrice = product.discountPercentage > 0
-        ? product.price * (1 - product.discountPercentage / 100)
-        : product.price;
-      return {
-        ...product,
-        qty,
-        discountedPrice,
-        lineTotal: discountedPrice * qty,
-      };
-    })
-    .filter(Boolean);
-};
+// const getCartItems = () => { // Unused - for future use
+//   return CartManager.getCartItems(state.cart, state.products);
+// };
 
 const getCartTotals = () => {
-  const items = getCartItems();
-  const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.lineTotal, 0);
-  return { items, totalQty, totalPrice };
+  return CartManager.getCartTotals(state.cart, state.products);
 };
 
 const updateCartUI = () => {
   const { items, totalQty, totalPrice } = getCartTotals();
+  if (!cartItemsEl) return;
+  
   cartItemsEl.innerHTML = "";
 
   if (!items.length) {
@@ -542,10 +447,10 @@ const updateCartUI = () => {
     cartItemsEl.appendChild(card);
   });
 
-  cartTotalEl.textContent = formatCurrency(totalPrice);
-  floatingCount.textContent = totalQty;
-  floatingTotal.textContent = formatCurrency(totalPrice);
-  floatingCart.classList.toggle("hidden", totalQty === 0);
+  if (cartTotalEl) cartTotalEl.textContent = formatCurrency(totalPrice);
+  if (floatingCount) floatingCount.textContent = String(totalQty);
+  if (floatingTotal) floatingTotal.textContent = formatCurrency(totalPrice);
+  if (floatingCart) floatingCart.classList.toggle("hidden", totalQty === 0);
 };
 
 const renderProducts = () => {
@@ -601,6 +506,8 @@ const renderProducts = () => {
 };
 
 const renderAdmin = () => {
+  if (!adminProductsEl) return;
+  
   adminProductsEl.innerHTML = "";
   const query = adminSearchInput?.value?.trim().toLowerCase() || "";
   const filteredProducts = state.products.filter((product) => {
@@ -612,8 +519,8 @@ const renderAdmin = () => {
 
   const { key: productKey, dir: productDir } = state.sortProducts;
   filteredProducts.sort((a, b) => {
-    let left = a[productKey];
-    let right = b[productKey];
+    let left = (a as any)[productKey];
+    let right = (b as any)[productKey];
     if (productKey === "price" || productKey === "discountPercentage") {
       left = Number(left);
       right = Number(right);
@@ -624,14 +531,14 @@ const renderAdmin = () => {
     }
     const compare =
       typeof left === "string"
-        ? left.localeCompare(right, "he")
-        : left - right;
+        ? left.localeCompare(String(right), "he")
+        : (left as number) - (right as number);
     return productDir === "asc" ? compare : -compare;
   });
 
   filteredProducts.forEach((product) => {
     const row = document.createElement("tr");
-    row.dataset.id = product.id;
+    row.dataset.id = String(product.id);
     row.innerHTML = `
       <td>${product.title}</td>
       <td>${getCategoryLabel(product)}</td>
@@ -655,7 +562,7 @@ const renderAdmin = () => {
     } else {
       categories.forEach((category) => {
         const row = document.createElement("tr");
-        row.dataset.categoryId = category.category_id;
+        row.dataset.categoryId = String(category.category_id);
         const imageSrc = category.image_url || "assets/all_categories.png";
         row.innerHTML = `
           <td>${category.category_name}</td>
@@ -671,6 +578,8 @@ const renderAdmin = () => {
     }
   }
 
+  if (!adminOrdersEl) return;
+  
   adminOrdersEl.innerHTML = "";
   const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
   const filteredOrders = state.orders.filter((order) => {
@@ -706,13 +615,13 @@ const renderAdmin = () => {
       left = a.deleted ? 1 : 0;
       right = b.deleted ? 1 : 0;
     } else {
-      left = Number(a[orderKey]) || 0;
-      right = Number(b[orderKey]) || 0;
+      left = Number((a as any)[orderKey]) || 0;
+      right = Number((b as any)[orderKey]) || 0;
     }
     const compare =
       typeof left === "string"
-        ? left.localeCompare(right, "he")
-        : left - right;
+        ? left.localeCompare(String(right), "he")
+        : (left as number) - (right as number);
     return orderDir === "asc" ? compare : -compare;
   });
 
@@ -726,7 +635,7 @@ const renderAdmin = () => {
 
   filteredOrders.forEach((order) => {
     const row = document.createElement("tr");
-    row.dataset.orderId = order.id;
+    row.dataset.orderId = String(order.id);
     if (order.deleted) {
       row.style.opacity = "0.5";
       row.style.textDecoration = "line-through";
@@ -855,42 +764,37 @@ const closeCart = () => {
   document.body.style.overflow = "";
 };
 
-const addToCart = (id) => {
-  const key = String(id);
-  state.cart[key] = (state.cart[key] || 0) + 1;
+const addToCart = (id: any) => {
+  state.cart = CartManager.addToCart(state.cart, id);
   updateCartUI();
   openCart();
 };
 
-const updateQty = (id, delta) => {
-  const key = String(id);
-  const next = (state.cart[key] || 0) + delta;
-  if (next <= 0) {
-    delete state.cart[key];
-  } else {
-    state.cart[key] = next;
-  }
+const updateQty = (id: any, delta: any) => {
+  state.cart = CartManager.updateQuantity(state.cart, id, delta);
   updateCartUI();
 };
 
 const setQty = (id, value) => {
-  const key = String(id);
-  const next = Number(value) || 0;
-  if (next <= 0) {
-    delete state.cart[key];
-  } else {
-    state.cart[key] = next;
-  }
+  state.cart = CartManager.setQuantity(state.cart, id, value);
   updateCartUI();
 };
 
-// Order mapping functions (use OrderMapper class)
+// Order building functions (use OrderBuilder class)
 const buildOrderMessage = (params: OrderMessageParams) => {
-  return OrderMapper.buildOrderMessage(params);
+  return OrderBuilder.buildOrderMessage({
+    items: params.items,
+    customerName: params.customerName,
+    customerPhone: params.customerPhone,
+    pickupDate: params.pickupDate,
+    pickupTime: params.pickupTime,
+    totalPrice: params.totalPrice,
+    userNotes: params.userNotes
+  });
 };
 
 const buildOrderLinks = (message) => {
-  return OrderMapper.buildOrderLinks(message, {
+  return OrderBuilder.buildOrderLinks(message, {
     whatsappPhone: state.checkoutWhatsappPhone,
     email: state.checkoutEmail
   });
@@ -909,7 +813,7 @@ const closeOrderChannelModal = () => {
 };
 
 const clearCheckoutState = () => {
-  state.cart = {};
+  state.cart = CartManager.clearCart();
   if (checkoutForm) {
     checkoutForm.reset();
   }
@@ -946,55 +850,26 @@ const handleCheckout = async (event) => {
   };
 
   setPickupValidity();
+  
+  // Check each input's validity individually (JSDOM might not handle form.checkValidity properly)
+  if (pickupDateInput && !pickupDateInput.validity.valid) {
+    if (checkoutError) {
+      checkoutError.textContent = pickupDateInput.validationMessage;
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
+  if (pickupTimeInput && !pickupTimeInput.validity.valid) {
+    if (checkoutError) {
+      checkoutError.textContent = pickupTimeInput.validationMessage;
+      checkoutError.classList.remove("hidden");
+    }
+    return;
+  }
+  
   if (!event.target.checkValidity()) {
     event.target.reportValidity();
-    return;
-  }
-
-  const pickupDateTime = getPickupDateTime(payload.date, payload.time);
-  const minDateTime = getNextBusinessDateTime(new Date());
-  
-  if (!pickupDateTime) {
-    if (checkoutError) {
-      checkoutError.textContent = "יש לבחור תאריך ושעה תקינים.";
-      checkoutError.classList.remove("hidden");
-    }
-    return;
-  }
-  
-  // Check if date is Friday (5) or Saturday (6)
-  const day = pickupDateTime.getDay();
-  if (day === 6) {
-    const message = "ביום שבת אנו סגורים. בחרו יום אחר.";
-    if (checkoutError) {
-      checkoutError.textContent = message;
-      checkoutError.classList.remove("hidden");
-    }
-    alert(message);
-    return;
-  }
-  
-  // Check business hours
-  const hours = BUSINESS_HOURS.weekDays[day];
-  const hour = pickupDateTime.getHours();
-  if (!hours || hour < hours.open || hour > hours.close) {
-    const message = "שעות פעילות: א׳-ו׳ 06:00-15:00";
-    if (checkoutError) {
-      checkoutError.textContent = message;
-      checkoutError.classList.remove("hidden");
-    }
-    alert(message);
-    return;
-  }
-  
-  // Check 24 hour minimum
-  if (pickupDateTime < minDateTime) {
-    const message = "הזמנה יכולה להישלח בטווח של לפחות 24 שעות מראש בשעות פעילות";
-    if (checkoutError) {
-      checkoutError.textContent = message;
-      checkoutError.classList.remove("hidden");
-    }
-    alert(message);
     return;
   }
 

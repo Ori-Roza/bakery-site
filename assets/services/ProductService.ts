@@ -22,7 +22,7 @@ export class ProductService implements IDataService<Product> {
       return [];
     }
 
-    return (data || []).map(row => ProductMapper.mapDbToProduct(row as ProductDbRow));
+    return (data || []).map((row: any) => ProductMapper.mapDbToProduct(row as ProductDbRow));
   }
 
   async getById(id: number): Promise<Product | null> {

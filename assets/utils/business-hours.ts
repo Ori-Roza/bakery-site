@@ -54,10 +54,25 @@ export const isWithinBusinessHours = (date: Date): boolean => {
 
 /**
  * Get the next available business date/time (at least 24 hours from now)
+ * Results are cached to handle rapid successive calls within the same operation
  */
+let cachedResult: { fromTime: number; result: Date } | null = null;
+const CACHE_DURATION_MS = 300000; // 5 minutes
+
 export const getNextBusinessDateTime = (fromDate: Date): Date => {
+  const fromTime = fromDate.getTime();
+  
+  // Return cached result if it's fresh (within cache duration from the cached time)
+  // This ensures rapid successive calls return the same datetime, preventing validation drift
+  if (cachedResult) {
+    const timeDiff = Math.abs(fromTime - cachedResult.fromTime);
+    if (timeDiff < CACHE_DURATION_MS) {
+      return new Date(cachedResult.result);
+    }
+  }
+  
   // Start from 24 hours from the given date/time
-  let nextDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000);
+  let nextDate = new Date(fromTime + 24 * 60 * 60 * 1000);
   
   // Find next available business day starting from 24 hours from now
   let attempts = 0;
@@ -81,6 +96,9 @@ export const getNextBusinessDateTime = (fromDate: Date): Date => {
     }
     break;
   }
+  
+  // Cache the result
+  cachedResult = { fromTime, result: new Date(nextDate) };
   
   return nextDate;
 };

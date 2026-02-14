@@ -43,6 +43,7 @@ export const createSupabaseClient = async (): Promise<SupabaseClient | null> => 
     return null;
   }
 
+  // @ts-ignore - CDN import without type declarations
   const { createClient } = await import(
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
   );

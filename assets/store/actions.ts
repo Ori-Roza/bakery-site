@@ -84,7 +84,7 @@ export const removeCategory = (id: number): void => {
 };
 
 export const setActiveCategory = (categoryId: number | null): void => {
-  store.setState({ activeCategoryId: categoryId });
+  store.setState({ activeCategoryId: categoryId !== null ? String(categoryId) : null });
 };
 
 /**
@@ -125,19 +125,19 @@ export const logout = (): void => {
  * UI state actions
  */
 export const setEditingProductId = (id: number | null): void => {
-  store.setState({ editingProductId: id });
+  store.setState({ editingProductId: id !== null ? String(id) : null });
 };
 
 export const setEditingCategoryId = (id: number | null): void => {
-  store.setState({ editingCategoryId: id });
+  store.setState({ editingCategoryId: id !== null ? String(id) : null });
 };
 
 export const setCreatingCategoryId = (id: number | null): void => {
-  store.setState({ creatingCategoryId: id });
+  store.setState({ creatingCategoryId: id !== null ? String(id) : null });
 };
 
 export const setEditingCategoryRowId = (id: number | null): void => {
-  store.setState({ editingCategoryRowId: id });
+  store.setState({ editingCategoryRowId: id !== null ? String(id) : null });
 };
 
 export const setSortProducts = (sortConfig: SortConfig): void => {

@@ -28,7 +28,7 @@ export class CategoryMapper {
     // Try looking up by name
     const match = categories.find((item) => item.category_name === value);
     console.log("[normalizeCategoryId] Looked up by name, found:", match);
-    return match ? match.category_id : null;
+    return match ? (typeof match.category_id === 'string' ? Number(match.category_id) : match.category_id) : null;
   }
 
   /**

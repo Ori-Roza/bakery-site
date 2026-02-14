@@ -7,15 +7,21 @@ const setValidCheckout = (app) => {
   if (next.getDay() === 6) {
     next.setDate(next.getDate() + 1);
   }
-  next.setHours(10, 0, 0, 0);
+  // Round up to next hour to ensure pickup time is after minimum
+  // If we have minutes/seconds, add an hour
+  if (next.getMinutes() > 0 || next.getSeconds() > 0) {
+    next.setHours(next.getHours() + 1);
+  }
+  next.setMinutes(0, 0, 0);
   const yyyy = next.getFullYear();
   const mm = String(next.getMonth() + 1).padStart(2, "0");
   const dd = String(next.getDate()).padStart(2, "0");
+  const hh = String(next.getHours()).padStart(2, "0");
 
   document.getElementById("customer-name").value = "בדיקה";
   document.getElementById("customer-phone").value = "0503333333";
   document.getElementById("pickup-date").value = `${yyyy}-${mm}-${dd}`;
-  document.getElementById("pickup-time").value = "10:00";
+  document.getElementById("pickup-time").value = `${hh}:00`;
 };
 
 describe("order channel modal", () => {
