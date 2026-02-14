@@ -37,7 +37,7 @@ export class CartManager {
           price: product.price,
           discountedPrice,
           discountPercentage: product.discountPercentage,
-          image: product.imageUrl,
+          image: product.image,
           qty,
           lineTotal: discountedPrice * qty,
         };

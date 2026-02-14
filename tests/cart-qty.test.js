@@ -24,4 +24,17 @@ describe("cart quantity", () => {
     const floatingCart = document.getElementById("floating-cart");
     expect(floatingCart.classList.contains("hidden")).toBe(true);
   });
+
+  it("displays product image in cart item", async () => {
+    const client = await createSqliteSupabaseClient();
+    await loadAppWithClient(client);
+
+    const addButton = document.querySelector("button[data-action='add']");
+    addButton.click();
+
+    const cartItemImg = document.querySelector(".cart-item img");
+    expect(cartItemImg).toBeDefined();
+    expect(cartItemImg?.src).toBeTruthy();
+    expect(cartItemImg?.alt).toBeTruthy();
+  });
 });
