@@ -33,20 +33,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create Supabase config
-        run: |
-          cat <<EOF > assets/config.js
-          window.__SUPABASE__ = {
-            url: "${SUPABASE_URL}",
-            anonKey: "${SUPABASE_ANON_KEY}",
-          };
-          EOF
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
       - name: Build TypeScript
         run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+
+      - name: Create Supabase config and inject into HTML
+        run: |
+          # Create config.js
+          mkdir -p dist/assets
+          cat <<EOF > dist/assets/config.js
+          window.__SUPABASE__ = {
+            url: "${{ secrets.SUPABASE_URL }}",
+            anonKey: "${{ secrets.SUPABASE_ANON_KEY }}"
+          };
+          EOF
+          
+          # Inject script tag into HTML head (before closing </head>)
+          sed -i 's|</head>|<script src="/bakery-site/assets/config.js"></script></head>|' dist/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
