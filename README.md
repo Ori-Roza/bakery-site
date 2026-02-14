@@ -5,9 +5,9 @@
 ## תכולת הפרויקט
 
 - [index.html](index.html) — מסך ראשי עם קטלוג, סל, צ'ק־אאוט, ואזור ניהול.
-- [assets/app.js](assets/app.js) — לוגיקת סל, קטלוג, ניהול, Supabase ו־WhatsApp.
-- [assets/styles.css](assets/styles.css) — עיצוב משלים (Tailwind + התאמות).
-- [assets/config.example.js](assets/config.example.js) — תבנית הגדרות Supabase.
+- [src/app.js](src/app.js) — לוגיקת סל, קטלוג, ניהול, Supabase ו־WhatsApp.
+- [src/styles.css](src/styles.css) — עיצוב משלים (Tailwind + התאמות).
+- [src/config.example.js](src/config.example.js) — תבנית הגדרות Supabase.
 - [.github/workflows/deploy.yml](.github/workflows/deploy.yml) — פריסה אוטומטית ל־GitHub Pages.
 
 ## התאמה ל־GitHub Pages
@@ -70,9 +70,9 @@
 
 ### 4) קונפיג מקומי
 
-צרו קובץ [assets/config.js](assets/config.js) מקומית לפי התבנית:
+צרו קובץ [src/config.js](src/config.js) מקומית לפי התבנית:
 
-- העתיקו את [assets/config.example.js](assets/config.example.js) ל־assets/config.js
+- העתיקו את [src/config.example.js](src/config.example.js) ל־src/config.js
 - מלאו את `url` ו־`anonKey`.
 
 ## פריסה אוטומטית (GitHub Actions)
@@ -81,15 +81,15 @@
 	- `SUPABASE_URL`
 	- `SUPABASE_ANON_KEY`
 2. ודאו שה־repository מופעל ל־GitHub Pages עם מקור: **GitHub Actions**.
-3. בצעו push ל־main — ה־workflow ייצור [assets/config.js](assets/config.js) בזמן הפריסה.
+3. בצעו push ל־main — ה־workflow ייצור [src/config.js](src/config.js) בזמן הפריסה.
 
 ## הרצה מקומית
 
-פתחו את [index.html](index.html) בדפדפן אחרי יצירת [assets/config.js](assets/config.js).
+פתחו את [index.html](index.html) בדפדפן אחרי יצירת [src/config.js](src/config.js).
 
 ## שינוי מספר ה־WhatsApp
 
-פתחו [assets/app.js](assets/app.js) ועדכנו את הקבוע:
+פתחו [src/app.js](src/app.js) ועדכנו את הקבוע:
 
 - `WHATSAPP_PHONE` בפורמט בינלאומי ללא סימן + (לדוגמה: `972501234567`).
 

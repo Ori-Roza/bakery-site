@@ -572,7 +572,7 @@ const renderAdmin = () => {
       categories.forEach((category) => {
         const row = document.createElement("tr");
         row.dataset.categoryId = String(category.category_id);
-        const imageSrc = category.image_url || "assets/all_categories.png";
+        const imageSrc = category.image_url ? (category.image_url.startsWith('assets/') ? category.image_url.substring(7) : category.image_url) : "all_categories.png";
         row.innerHTML = `
           <td>${category.category_name}</td>
           <td>
@@ -2250,7 +2250,7 @@ const openCategoryEditModal = (category: any) => {
     categoryEditImageInput.value = "";
   }
   if (categoryEditPreview) {
-    const previewSrc = category.image_url || "assets/all_categories.png";
+    const previewSrc = category.image_url ? (category.image_url.startsWith('assets/') ? category.image_url.substring(7) : category.image_url) : "all_categories.png";
     categoryEditPreview.innerHTML = `
       <img src="${previewSrc}" alt="${category.category_name}" class="admin-category-image" />
     `;
@@ -2307,7 +2307,7 @@ const handleUpdateCategory = async () => {
   const category = state.categories.find(
     (item) => String(item.category_id) === String(state.editingCategoryRowId)
   );
-  let imageUrl = category?.image_url || "assets/all_categories.png";
+  let imageUrl = category?.image_url ? (category.image_url.startsWith('assets/') ? category.image_url.substring(7) : category.image_url) : "all_categories.png";
   if (categoryEditImageInput?.files?.length) {
     const file = categoryEditImageInput.files[0];
     if (!file) return;
@@ -2402,7 +2402,7 @@ const handleCreateCategory = async () => {
     categoryStatus.className = "text-sm mt-2 text-stone-500";
   }
 
-  let imageUrl = "assets/all_categories.png";
+  let imageUrl = "all_categories.png";
   if (categoryImageInput?.files?.length) {
     const file = categoryImageInput.files[0];
     if (!file) return;

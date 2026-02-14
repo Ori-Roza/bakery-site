@@ -14,9 +14,11 @@ export class CategoryResolver {
    * Get category thumbnail URL by ID
    */
   static getCategoryThumbnail(categories: Category[], categoryId: string | number | null): string {
-    if (categoryId === null) return 'assets/all_categories.png';
+    if (categoryId === null) return 'all_categories.png';
     const category = categories.find((c) => String(c.id) === String(categoryId) || c.category_id === categoryId);
-    return category?.image_url || 'assets/all_categories.png';
+    const imageUrl = category?.image_url || 'all_categories.png';
+    // Strip "assets/" prefix if present (for backward compatibility with old data)
+    return imageUrl.startsWith('assets/') ? imageUrl.substring(7) : imageUrl;
   }
 
   /**

@@ -1,4 +1,4 @@
-assets/config.js
+src/config.js
 reset-pass-command
 .DS_Store
 /node_modules
