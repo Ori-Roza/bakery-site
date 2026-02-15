@@ -23,3 +23,11 @@ export const formatTimeForInput = (date: Date): string => {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 };
+
+/**
+ * Format a date string (YYYY-MM-DD) as DD/MM/YYYY for display
+ */
+export const formatDateForDisplay = (dateString: string): string => {
+  const [year, month, day] = dateString.split("-");
+  return `${day}/${month}/${year}`;
+};

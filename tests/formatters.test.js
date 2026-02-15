@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   formatCurrency,
   formatDateForInput,
-  formatTimeForInput
+  formatTimeForInput,
+  formatDateForDisplay
 } from "../src/utils/formatters";
 
 describe("formatCurrency", () => {
@@ -150,5 +151,37 @@ describe("formatTimeForInput", () => {
     const date = new Date(2026, 0, 1, 10, 30, 45);
     const result = formatTimeForInput(date);
     expect(result).toBe("10:30");
+  });
+});
+
+describe("formatDateForDisplay", () => {
+  it("formats YYYY-MM-DD as DD/MM/YYYY", () => {
+    const result = formatDateForDisplay("2026-01-20");
+    expect(result).toBe("20/01/2026");
+  });
+
+  it("handles single digit day and month", () => {
+    const result = formatDateForDisplay("2026-05-09");
+    expect(result).toBe("09/05/2026");
+  });
+
+  it("handles double digit day and month", () => {
+    const result = formatDateForDisplay("2026-12-31");
+    expect(result).toBe("31/12/2026");
+  });
+
+  it("formats end of month correctly", () => {
+    const result = formatDateForDisplay("2026-02-28");
+    expect(result).toBe("28/02/2026");
+  });
+
+  it("formats leap year correctly", () => {
+    const result = formatDateForDisplay("2024-02-29");
+    expect(result).toBe("29/02/2024");
+  });
+
+  it("returns format DD/MM/YYYY", () => {
+    const result = formatDateForDisplay("2026-03-15");
+    expect(result).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
   });
 });

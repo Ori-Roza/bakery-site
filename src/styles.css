@@ -313,22 +313,31 @@ img {
 }
 
 .secondary-button {
+  display: block;
+  width: 100%;
   border: 1px solid rgba(145, 70, 30, 0.28);
   border-radius: 0.75rem;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
   color: #92442d;
-  min-height: 36px;
+  min-height: 44px;
   -webkit-tap-highlight-color: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  background-color: white;
+  font-family: inherit;
+}
+
+@media (min-width: 641px) {
+  .secondary-button {
+    width: auto;
+  }
 }
 
 @media (max-width: 640px) {
   .secondary-button {
-    padding: 0.5rem 1rem;
-    min-height: 44px;
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
   }
 }
 
