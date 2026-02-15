@@ -34,21 +34,18 @@ function escapeCSVValue(value: any): string {
 }
 
 /**
- * CSV Headers in Hebrew
+ * CSV Headers in Hebrew - ordered LTR for natural RTL reading
  */
 const CSV_HEADERS = [
   'מזהה הזמנה',
   'שם לקוח',
-  'טלפון לקוח',
   'תאריך יצירה',
   'תאריך איסוף',
-  'שעת איסוף',
-  'סכום הזמנה',
+  'סכום',
   'שולם',
   'הערות מנהל',
   'הערות לקוח',
-  'נמחק',
-  'פריטים',
+  'מחוק',
 ];
 
 /**
@@ -65,20 +62,13 @@ export function generateCSV(orders: Order[]): string {
     const row = [
       escapeCSVValue(order.order_number || order.id),
       escapeCSVValue(order.customer?.name || order.customer_name || ''),
-      escapeCSVValue(order.customer?.phone || order.customer_phone || ''),
       escapeCSVValue(formatDateForExport(order.created_at)),
       escapeCSVValue(formatDateForExport(order.pickup_date)),
-      escapeCSVValue(order.pickup_time || ''),
       escapeCSVValue(order.total || order.total_price || ''),
       escapeCSVValue(order.paid ? 'כן' : 'לא'),
       escapeCSVValue(order.notes || ''),
       escapeCSVValue(order.user_notes || ''),
       escapeCSVValue(order.deleted ? 'כן' : 'לא'),
-      escapeCSVValue(
-        order.items
-          ?.map((item) => `${item.title} (${item.qty}x)`)
-          .join('; ') || ''
-      ),
     ];
 
     rows.push(row.join(','));
@@ -105,20 +95,13 @@ export function generateXLSX(orders: Order[]): Blob {
     const row = [
       escapeCSVValue(order.order_number || order.id),
       escapeCSVValue(order.customer?.name || order.customer_name || ''),
-      escapeCSVValue(order.customer?.phone || order.customer_phone || ''),
       escapeCSVValue(formatDateForExport(order.created_at)),
       escapeCSVValue(formatDateForExport(order.pickup_date)),
-      escapeCSVValue(order.pickup_time || ''),
       escapeCSVValue(order.total || order.total_price || ''),
       escapeCSVValue(order.paid ? 'כן' : 'לא'),
       escapeCSVValue(order.notes || ''),
       escapeCSVValue(order.user_notes || ''),
       escapeCSVValue(order.deleted ? 'כן' : 'לא'),
-      escapeCSVValue(
-        order.items
-          ?.map((item) => `${item.title} (${item.qty}x)`)
-          .join('; ') || ''
-      ),
     ];
 
     rows.push(row.join('\t'));
@@ -189,21 +172,62 @@ export async function exportStatsAsPDF(element: HTMLElement | null): Promise<voi
   const html2pdfModule = await import('html2pdf.js');
   const html2pdf = html2pdfModule.default;
 
-  await html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename: `סטטיסטיקות_${getTimestamp()}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0,
-        backgroundColor: '#ffffff',
-        ignoreElements: (currentElement: Element) => currentElement.id === 'stats-export-pdf',
+  // Temporarily remove overflow/height constraints for proper PDF capture
+  const elementsToUnconstraint = element.querySelectorAll('.stats-table-wrapper, .admin-table-wrapper, .admin-card');
+  const originalStyles: Array<{ element: Element; styles: Partial<CSSStyleDeclaration> }> = [];
+
+  elementsToUnconstraint.forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    originalStyles.push({
+      element: el,
+      styles: {
+        maxHeight: htmlEl.style.maxHeight,
+        overflowY: htmlEl.style.overflowY,
+        overflowX: htmlEl.style.overflowX,
+        overflow: htmlEl.style.overflow,
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-    } as any)
-    .from(element)
-    .save();
+    });
+    htmlEl.style.maxHeight = 'none';
+    htmlEl.style.overflowY = 'visible';
+    htmlEl.style.overflowX = 'visible';
+    htmlEl.style.overflow = 'visible';
+  });
+
+  try {
+    await html2pdf()
+      .set({
+        margin: [5, 5, 5, 5],
+        filename: `סטטיסטיקות_${getTimestamp()}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+          backgroundColor: '#ffffff',
+          ignoreElements: (currentElement: Element) => {
+            // Exclude export button and action buttons from stats table
+            if (currentElement.id === 'stats-export-pdf') return true;
+            // Exclude action button columns in stats table
+            if (currentElement.closest('.stats-table')?.contains(currentElement) && 
+                currentElement.getAttribute('data-action-buttons') === 'true') {
+              return true;
+            }
+            return false;
+          },
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak: { mode: ['css', 'legacy'] },
+      } as any)
+      .from(element)
+      .save();
+  } finally {
+    // Restore original styles
+    originalStyles.forEach(({ element: el, styles }) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.style.maxHeight = styles.maxHeight || '';
+      htmlEl.style.overflowY = styles.overflowY || '';
+      htmlEl.style.overflowX = styles.overflowX || '';
+      htmlEl.style.overflow = styles.overflow || '';
+    });
+  }
 }
