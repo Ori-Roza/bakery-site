@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import * as OrderFilterService from '../src/services/OrderFilterService';
 import * as OrderExportService from '../src/services/OrderExportService';
+
+const saveMock = vi.fn().mockResolvedValue(undefined);
+const fromMock = vi.fn(() => ({ save: saveMock }));
+const setMock = vi.fn(() => ({ from: fromMock }));
+const html2pdfFactoryMock = vi.fn(() => ({ set: setMock }));
+
+vi.mock('html2pdf.js', () => ({
+  default: html2pdfFactoryMock,
+}));
 
 describe('Order Filter Service', () => {
   const mockOrders = [
@@ -390,6 +399,35 @@ describe('Order Export Service', () => {
       const blob = OrderExportService.generateXLSX([]);
       expect(blob).toBeInstanceOf(Blob);
       expect(blob.size).toBeGreaterThan(0);
+    });
+  });
+
+  describe('exportStatsAsPDF', () => {
+    beforeEach(() => {
+      saveMock.mockClear();
+      fromMock.mockClear();
+      setMock.mockClear();
+      html2pdfFactoryMock.mockClear();
+      window.alert = vi.fn();
+    });
+
+    it('should alert and skip export when element is missing', async () => {
+      await OrderExportService.exportStatsAsPDF(null);
+
+      expect(window.alert).toHaveBeenCalledTimes(1);
+      expect(html2pdfFactoryMock).not.toHaveBeenCalled();
+    });
+
+    it('should call html2pdf pipeline when element exists', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      await OrderExportService.exportStatsAsPDF(element);
+
+      expect(html2pdfFactoryMock).toHaveBeenCalledTimes(1);
+      expect(setMock).toHaveBeenCalledTimes(1);
+      expect(fromMock).toHaveBeenCalledWith(element);
+      expect(saveMock).toHaveBeenCalledTimes(1);
     });
   });
 });
