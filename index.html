@@ -401,6 +401,31 @@
                   class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2"
                 ></i>
               </div>
+
+              <!-- Filter Controls -->
+              <div class="flex flex-col sm:flex-row gap-3 items-center mb-4">
+                <button id="admin-orders-filter-btn" class="secondary-button flex items-center gap-2">
+                  <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                  סינון
+                </button>
+                <button id="admin-orders-clear-filters-btn" class="secondary-button text-xs hidden">
+                  נקה הכל
+                </button>
+                <button id="admin-orders-export-csv" class="secondary-button flex items-center gap-2">
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                  ייצוא ל-CSV
+                </button>
+                <button id="admin-orders-export-xlsx" class="secondary-button flex items-center gap-2">
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                  ייצוא ל-XLSX
+                </button>
+              </div>
+
+              <!-- Active Filters Display -->
+              <div id="admin-orders-active-filters" class="mb-4 flex flex-wrap gap-2 hidden">
+                <div class="text-sm text-stone-600 font-medium mb-2 w-full">סינונים פעילים:</div>
+              </div>
+
               <div class="admin-table-wrapper">
                 <table id="admin-orders-table" class="admin-table">
                   <thead>
@@ -554,6 +579,70 @@
             </div>
           </div>
         </section>
+
+        <!-- Filter Modal -->
+        <div id="admin-orders-filter-modal" class="modal hidden">
+          <div class="modal-content max-w-md">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="admin-title">הוסף סינון</h4>
+              <button id="admin-filter-modal-close" class="secondary-button text-xs">סגור</button>
+            </div>
+
+            <div class="grid gap-4">
+              <!-- Field Selector -->
+              <div>
+                <label class="form-label">בחר שדה</label>
+                <select id="admin-filter-field" class="form-input">
+                  <option value="">בחר שדה...</option>
+                  <option value="order_number">מזהה הזמנה</option>
+                  <option value="customer_name">שם לקוח</option>
+                  <option value="created_at">תאריך</option>
+                  <option value="total">סכום הזמנה</option>
+                  <option value="paid">שולם</option>
+                  <option value="deleted">נמחק</option>
+                  <option value="notes">הערות מנהל</option>
+                  <option value="user_notes">הערות לקוח</option>
+                </select>
+              </div>
+
+              <!-- Operator Selector -->
+              <div>
+                <label class="form-label">בחר תנאי</label>
+                <select id="admin-filter-operator" class="form-input" disabled>
+                  <option value="">בחר תנאי...</option>
+                </select>
+              </div>
+
+              <!-- Value Input (Type varies) -->
+              <div>
+                <label class="form-label" id="admin-filter-value-label">הזן ערך</label>
+                <input
+                  id="admin-filter-value"
+                  type="text"
+                  class="form-input"
+                  placeholder="הזן ערך"
+                />
+                <input
+                  id="admin-filter-value-from"
+                  type="text"
+                  class="form-input hidden mt-2"
+                  placeholder="מ..."
+                />
+                <input
+                  id="admin-filter-value-to"
+                  type="text"
+                  class="form-input hidden mt-2"
+                  placeholder="עד..."
+                />
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button id="admin-filter-cancel" class="secondary-button flex-1">ביטול</button>
+              <button id="admin-filter-apply" class="primary-button flex-1">החל סינון</button>
+            </div>
+          </div>
+        </div>
       </main>
 
       <footer class="border-t border-amber-200 mt-10">

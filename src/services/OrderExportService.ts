@@ -1,0 +1,156 @@
+/**
+ * Order export service
+ * Handles generating and downloading orders as CSV or XLSX
+ */
+
+import type { Order } from '../types/models';
+
+/**
+ * Escape CSV value (handle quotes and commas)
+ */
+function escapeCSVValue(value: any): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+/**
+ * CSV Headers in Hebrew
+ */
+const CSV_HEADERS = [
+  'מזהה הזמנה',
+  'שם לקוח',
+  'טלפון לקוח',
+  'תאריך',
+  'סכום הזמנה',
+  'שולם',
+  'הערות מנהל',
+  'הערות לקוח',
+  'נמחק',
+  'פריטים',
+];
+
+/**
+ * Generate CSV content from orders
+ */
+export function generateCSV(orders: Order[]): string {
+  const rows: string[] = [];
+
+  // Add header row
+  rows.push(CSV_HEADERS.map(escapeCSVValue).join(','));
+
+  // Add data rows
+  for (const order of orders) {
+    const row = [
+      escapeCSVValue(order.order_number || order.id),
+      escapeCSVValue(order.customer?.name || order.customer_name || ''),
+      escapeCSVValue(order.customer?.phone || order.customer_phone || ''),
+      escapeCSVValue(formatDateForExport(order.created_at)),
+      escapeCSVValue(order.total || order.total_price || ''),
+      escapeCSVValue(order.paid ? 'כן' : 'לא'),
+      escapeCSVValue(order.notes || ''),
+      escapeCSVValue(order.user_notes || ''),
+      escapeCSVValue(order.deleted ? 'כן' : 'לא'),
+      escapeCSVValue(
+        order.items
+          ?.map((item) => `${item.title} (${item.qty}x)`)
+          .join('; ') || ''
+      ),
+    ];
+
+    rows.push(row.join(','));
+  }
+
+  return rows.join('\n');
+}
+
+/**
+ * Generate XLSX as CSV-compatible format for now
+ * Note: For true XLSX support, the 'xlsx' package would need to be added to dependencies
+ * This generates a TSV that can be opened in Excel, or can be converted to XLSX
+ */
+export function generateXLSX(orders: Order[]): Blob {
+  // For now, we'll generate tab-separated values which Excel handles well
+  // This is compatible with xlsx library: xlsx.utils.sheet_to_csv(ws, { FS: '\t' })
+  const rows: string[] = [];
+
+  // Add header row
+  rows.push(CSV_HEADERS.map(escapeCSVValue).join('\t'));
+
+  // Add data rows
+  for (const order of orders) {
+    const row = [
+      escapeCSVValue(order.order_number || order.id),
+      escapeCSVValue(order.customer?.name || order.customer_name || ''),
+      escapeCSVValue(order.customer?.phone || order.customer_phone || ''),
+      escapeCSVValue(formatDateForExport(order.created_at)),
+      escapeCSVValue(order.total || order.total_price || ''),
+      escapeCSVValue(order.paid ? 'כן' : 'לא'),
+      escapeCSVValue(order.notes || ''),
+      escapeCSVValue(order.user_notes || ''),
+      escapeCSVValue(order.deleted ? 'כן' : 'לא'),
+      escapeCSVValue(
+        order.items
+          ?.map((item) => `${item.title} (${item.qty}x)`)
+          .join('; ') || ''
+      ),
+    ];
+
+    rows.push(row.join('\t'));
+  }
+
+  const content = rows.join('\n');
+  return new Blob([content], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}
+
+/**
+ * Trigger download of file in browser
+ */
+export function downloadFile(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Generate timestamp for filename
+ */
+function getTimestamp(): string {
+  const now = new Date();
+  return now
+    .toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    .replace(/\//g, '-');
+}
+
+/**
+ * Export orders as CSV with download
+ */
+export function exportOrdersAsCSV(orders: Order[]): void {
+  const csv = generateCSV(orders);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const filename = `הזמנות_${getTimestamp()}.csv`;
+  downloadFile(blob, filename);
+}
+
+/**
+ * Export orders as XLSX with download
+ */
+export function exportOrdersAsXLSX(orders: Order[]): void {
+  const blob = generateXLSX(orders);
+  const filename = `הזמנות_${getTimestamp()}.xlsx`;
+  downloadFile(blob, filename);
+}

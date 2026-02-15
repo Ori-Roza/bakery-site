@@ -39,6 +39,9 @@ const initialState: AppState = {
   pendingOrderLinks: null,
   editingCategoryRowId: null,
   ordersAccepting: true,
+  activeOrderFilters: [],
+  isFilterModalOpen: false,
+  searchOrdersText: '',
 };
 
 /**

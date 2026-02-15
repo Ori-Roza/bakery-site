@@ -13,11 +13,13 @@ import {
   CUSTOMER_PHONE_REQUIRED,
   DEFAULT_ABOUT
 } from './config/constants';
-import type { AppState, OrderMessageParams } from './types/models';
+import type { AppState, OrderMessageParams, OrderFilter } from './types/models';
 import { store, getState } from './store/state';
 import * as actions from './store/actions';
 import { ProductMapper } from './models/ProductMapper';
 import { CategoryMapper } from './models/CategoryMapper';
+import * as OrderFilterService from './services/OrderFilterService';
+import * as OrderExportService from './services/OrderExportService';
 import { createSupabaseClient } from './services/SupabaseClient';
 import { StorageService } from './services/StorageService';
 import { ProductService } from './services/ProductService';
@@ -28,7 +30,7 @@ import { OrderBuilder } from './business/OrderBuilder';
 import { CategoryUI } from './ui/CategoryUI';
 // import { CartUI } from './ui/CartUI'; // Unused - for future use
 // import { ProductUI } from './ui/ProductUI'; // Unused - for future use
-// import { AdminUI } from './ui/AdminUI'; // Unused - for future use
+import { AdminUI } from './ui/AdminUI';
 // import { ModalUI } from './ui/ModalUI'; // Unused - for future use
 // import { CartHandlers } from './handlers/CartHandlers'; // Unused - for future use
 // import { CheckoutHandlers } from './handlers/CheckoutHandlers'; // Unused - for future use
@@ -588,12 +590,39 @@ const renderAdmin = () => {
   
   adminOrdersEl.innerHTML = "";
   const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
-  const filteredOrders = state.orders.filter((order) => {
+  
+  // First apply search filter
+  let filteredOrders = state.orders.filter((order) => {
     if (!orderQuery) return true;
     const name = order.customer?.name?.toLowerCase() || "";
     const orderNumber = String(order.order_number ?? "").toLowerCase();
     return name.includes(orderQuery) || orderNumber.includes(orderQuery);
   });
+
+  // Then apply advanced filters
+  filteredOrders = OrderFilterService.applyFilters(filteredOrders, state.activeOrderFilters);
+
+  // Render active filter chips
+  const adminActiveFiltersEl = document.getElementById("admin-orders-active-filters");
+  const adminFilterClearBtn = document.getElementById("admin-orders-clear-filters-btn");
+  if (adminActiveFiltersEl) {
+    AdminUI.renderActiveFilterChips(
+      state.activeOrderFilters,
+      adminActiveFiltersEl,
+      (filter) => OrderFilterService.formatFilterForDisplay(filter),
+      (index) => {
+        state.activeOrderFilters.splice(index, 1);
+        renderAdmin();
+      }
+    );
+    
+    // Toggle clear button visibility
+    if (state.activeOrderFilters.length > 0) {
+      adminFilterClearBtn?.classList.remove("hidden");
+    } else {
+      adminFilterClearBtn?.classList.add("hidden");
+    }
+  }
 
   const { key: orderKey, dir: orderDir } = state.sortOrders;
   filteredOrders.sort((a, b) => {
@@ -634,7 +663,7 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='8' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
+      "<td colspan='8' class='text-sm text-stone-500'>לא קיימת תוצאות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
@@ -2732,7 +2761,245 @@ const setupListeners = () => {
 
   adminSearchInput?.addEventListener("input", renderAdmin);
   adminOrdersSearchInput?.addEventListener("input", renderAdmin);
+
+  // Filter modal and export button listeners
+  const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn");
+  const adminFilterModalClose = document.getElementById("admin-filter-modal-close");
+  const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
+  const adminFilterOperator = document.getElementById("admin-filter-operator") as HTMLSelectElement | null;
+  const adminFilterValue = document.getElementById("admin-filter-value") as HTMLInputElement | null;
+  const adminFilterValueFrom = document.getElementById("admin-filter-value-from") as HTMLInputElement | null;
+  const adminFilterValueTo = document.getElementById("admin-filter-value-to") as HTMLInputElement | null;
+  const adminFilterCancel = document.getElementById("admin-filter-cancel");
+  const adminFilterApply = document.getElementById("admin-filter-apply");
+  const adminOrderFilterModal = document.getElementById("admin-orders-filter-modal");
+  const adminFilterClearBtn = document.getElementById("admin-orders-clear-filters-btn");
+  const adminExportCsvBtn = document.getElementById("admin-orders-export-csv");
+  const adminExportXlsxBtn = document.getElementById("admin-orders-export-xlsx");
+  const adminActiveFiltersContainer = document.getElementById("admin-orders-active-filters");
+
+  // Toggle filter modal
+  adminOrdersFilterBtn?.addEventListener("click", () => {
+    state.isFilterModalOpen = !state.isFilterModalOpen;
+    if (state.isFilterModalOpen) {
+      adminOrderFilterModal?.classList.remove("hidden");
+      adminFilterField?.focus();
+    } else {
+      adminOrderFilterModal?.classList.add("hidden");
+    }
+  });
+
+  // Close filter modal
+  adminFilterModalClose?.addEventListener("click", () => {
+    state.isFilterModalOpen = false;
+    adminOrderFilterModal?.classList.add("hidden");
+  });
+
+  // Field selector change - populate operators
+  adminFilterField?.addEventListener("change", () => {
+    const selectedField = adminFilterField.value;
+    if (!selectedField) {
+      adminFilterOperator?.setAttribute("disabled", "disabled");
+      return;
+    }
+
+    const operators = OrderFilterService.getOperatorsForField(selectedField);
+    if (adminFilterOperator) {
+      adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
+      operators.forEach((op) => {
+        const option = document.createElement("option");
+        option.value = op.value;
+        option.textContent = op.label;
+        adminFilterOperator.appendChild(option);
+      });
+      adminFilterOperator.removeAttribute("disabled");
+    }
+
+    // Reset value inputs
+    if (adminFilterValue) adminFilterValue.value = "";
+    if (adminFilterValueFrom) adminFilterValueFrom.value = "";
+    if (adminFilterValueTo) adminFilterValueTo.value = "";
+  });
+
+  // Operator selector change - show appropriate input fields
+  adminFilterOperator?.addEventListener("change", () => {
+    const fieldName = adminFilterField?.value;
+    const operator = adminFilterOperator.value;
+    const fieldDef = OrderFilterService.getFieldDef(fieldName || "");
+
+    // Hide all inputs first
+    if (adminFilterValue) adminFilterValue.classList.remove("hidden");
+    if (adminFilterValueFrom) adminFilterValueFrom.classList.add("hidden");
+    if (adminFilterValueTo) adminFilterValueTo.classList.add("hidden");
+
+    if (!fieldDef) return;
+
+    // Update input type based on field type and operator
+    if (fieldDef.type === "number") {
+      if (adminFilterValue) {
+        adminFilterValue.type = "number";
+        adminFilterValue.placeholder = "הזן מספר";
+      }
+      if (operator === "between") {
+        if (adminFilterValue) adminFilterValue.classList.add("hidden");
+        if (adminFilterValueFrom) {
+          adminFilterValueFrom.classList.remove("hidden");
+          adminFilterValueFrom.type = "number";
+          adminFilterValueFrom.placeholder = "מ...";
+        }
+        if (adminFilterValueTo) {
+          adminFilterValueTo.classList.remove("hidden");
+          adminFilterValueTo.type = "number";
+          adminFilterValueTo.placeholder = "עד...";
+        }
+      }
+    } else if (fieldDef.type === "date") {
+      if (adminFilterValue) {
+        adminFilterValue.type = "date";
+      }
+      if (operator === "between" || operator === "betweenDates") {
+        if (adminFilterValue) adminFilterValue.classList.add("hidden");
+        if (adminFilterValueFrom) {
+          adminFilterValueFrom.classList.remove("hidden");
+          adminFilterValueFrom.type = "date";
+          adminFilterValueFrom.placeholder = "מתאריך...";
+        }
+        if (adminFilterValueTo) {
+          adminFilterValueTo.classList.remove("hidden");
+          adminFilterValueTo.type = "date";
+          adminFilterValueTo.placeholder = "עד תאריך...";
+        }
+      } else {
+        if (adminFilterValue) adminFilterValue.type = "date";
+      }
+    } else if (fieldDef.type === "boolean") {
+      if (adminFilterValue) {
+        adminFilterValue.type = "text";
+        // Replace with dropdown for boolean
+        const div = adminFilterValue.parentElement;
+        if (div && !div.querySelector("select.filter-boolean-select")) {
+          const select = document.createElement("select");
+          select.className = "form-input filter-boolean-select";
+          select.innerHTML = '<option value="">בחר...</option><option value="yes">כן</option><option value="no">לא</option>';
+          adminFilterValue.replaceWith(select);
+          // Re-assign the reference
+          (window as any).adminFilterBooleanSelect = select;
+        }
+      }
+    } else {
+      if (adminFilterValue) {
+        adminFilterValue.type = "text";
+      }
+    }
+  });
+
+  // Apply filter
+  adminFilterApply?.addEventListener("click", () => {
+    const fieldName = adminFilterField?.value;
+    const operator = adminFilterOperator?.value;
+    let value: any = null;
+
+    if (!fieldName || !operator) {
+      alert("יש לבחור שדה ותנאי.");
+      return;
+    }
+
+    const fieldDef = OrderFilterService.getFieldDef(fieldName);
+
+    // Get filter value based on field type
+    if (fieldDef?.type === "number" && operator === "between") {
+      const fromVal = adminFilterValueFrom?.value;
+      const toVal = adminFilterValueTo?.value;
+      if (!fromVal || !toVal) {
+        alert("יש להזין ערכים מ-עד.");
+        return;
+      }
+      value = [Number(fromVal), Number(toVal)];
+    } else if (fieldDef?.type === "date" && (operator === "between" || operator === "betweenDates")) {
+      const fromVal = adminFilterValueFrom?.value;
+      const toVal = adminFilterValueTo?.value;
+      if (!fromVal || !toVal) {
+        alert("יש לבחור תאריכים מ-עד.");
+        return;
+      }
+      value = [fromVal, toVal];
+    } else if (fieldDef?.type === "boolean") {
+      const selectEl = document.querySelector(".filter-boolean-select") as HTMLSelectElement | null;
+      value = selectEl?.value || adminFilterValue?.value;
+      if (!value || value === "") {
+        alert("יש לבחור כן או לא.");
+        return;
+      }
+    } else {
+      value = adminFilterValue?.value;
+      if (!value || value.toString().trim() === "") {
+        alert("יש להזין ערך.");
+        return;
+      }
+    }
+
+    // Validate filter
+    const newFilter: OrderFilter = { field: fieldName, operator, value };
+    const validation = OrderFilterService.validateFilter(newFilter);
+    if (!validation.valid) {
+      alert(validation.error || "סינון לא תקין");
+      return;
+    }
+
+    // Add filter to state
+    state.activeOrderFilters.push(newFilter);
+
+    // Reset modal
+    if (adminFilterField) adminFilterField.value = "";
+    if (adminFilterOperator) adminFilterOperator.value = "";
+    if (adminFilterValue) adminFilterValue.value = "";
+    if (adminFilterValueFrom) adminFilterValueFrom.value = "";
+    if (adminFilterValueTo) adminFilterValueTo.value = "";
+
+    // Close modal
+    state.isFilterModalOpen = false;
+    adminOrderFilterModal?.classList.add("hidden");
+
+    // Re-render
+    renderAdmin();
+  });
+
+  // Cancel filter modal
+  adminFilterCancel?.addEventListener("click", () => {
+    state.isFilterModalOpen = false;
+    adminOrderFilterModal?.classList.add("hidden");
+  });
+
+  // Remove individual filter
+  adminActiveFiltersContainer?.addEventListener("click", (event) => {
+    const removeBtn = (event.target as HTMLElement).closest("button[data-filter-index]");
+    if (removeBtn) {
+      const index = parseInt((removeBtn as HTMLElement).dataset.filterIndex || "0", 10);
+      state.activeOrderFilters.splice(index, 1);
+      renderAdmin();
+    }
+  });
+
+  // Clear all filters
+  adminFilterClearBtn?.addEventListener("click", () => {
+    state.activeOrderFilters = [];
+    renderAdmin();
+  });
+
+  // Export to CSV
+  adminExportCsvBtn?.addEventListener("click", () => {
+    const filteredOrders = OrderFilterService.applyFilters(state.orders, state.activeOrderFilters);
+    OrderExportService.exportOrdersAsCSV(filteredOrders);
+  });
+
+  // Export to XLSX
+  adminExportXlsxBtn?.addEventListener("click", () => {
+    const filteredOrders = OrderFilterService.applyFilters(state.orders, state.activeOrderFilters);
+    OrderExportService.exportOrdersAsXLSX(filteredOrders);
+  });
+
   if (productSearchInput) {
+
     productSearchInput.addEventListener("input", renderProducts);
   }
   if (adminAboutSave) {
