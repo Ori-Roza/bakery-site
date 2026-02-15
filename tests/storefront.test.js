@@ -75,12 +75,15 @@ describe("storefront", () => {
     dateInput.dispatchEvent(new Event("blur", { bubbles: true }));
     timeInput.dispatchEvent(new Event("blur", { bubbles: true }));
 
+    // Count orders before submission
+    const countBeforeRow = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
+    const countBefore = countBeforeRow.count;
+
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
     await flushPromises();
 
     // Check if a new order was inserted
-    const countBefore = 6; // seeded orders
     const row = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
     expect(row.count).toBe(countBefore + 1);
 
