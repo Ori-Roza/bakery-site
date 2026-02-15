@@ -41,33 +41,6 @@ const initializeMockDb = async () => {
   return mockDbClient;
 };
 
-// Serialize client for injection into HTML
-const serializeClientForInjection = (client) => {
-  // Create a function that reconstructs the client on the client side
-  return `
-    window.__SUPABASE_CLIENT__ = {
-      from: function(table) {
-        return window.__MOCK_DB_CLIENT__.from(table);
-      },
-      auth: {
-        getSession: async function() {
-          return await window.__MOCK_DB_CLIENT__.auth.getSession();
-        },
-        signInWithPassword: async function(credentials) {
-          return await window.__MOCK_DB_CLIENT__.auth.signInWithPassword(credentials);
-        },
-        signOut: async function() {
-          return await window.__MOCK_DB_CLIENT__.auth.signOut();
-        },
-        onAuthStateChange: function(callback) {
-          return window.__MOCK_DB_CLIENT__.auth.onAuthStateChange(callback);
-        }
-      },
-      storage: window.__MOCK_DB_CLIENT__.storage
-    };
-  `;
-};
-
 const server = http.createServer(async (req, res) => {
   try {
     const filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
@@ -110,18 +83,27 @@ const server = http.createServer(async (req, res) => {
       await initializeMockDb();
       const htmlContent = data.toString();
       
-      // Insert mock DB initialization before closing </head> tag
+      // Inject mock DB client setup before closing </head> tag
+      // This uses a simpler approach that works with the existing SupabaseClient.ts
       const mockDbScript = `
         <script type="module">
-          // Import mock DB helper
+          // Import the mock client creator
           import { createSqliteSupabaseClient } from '/tests/helpers/sqliteSupabaseMock.js';
           
-          // Initialize mock client
+          // Initialize and inject mock client
           (async () => {
-            const mockClient = await createSqliteSupabaseClient({ seed: true });
-            window.__SUPABASE_CLIENT__ = mockClient;
-            window.__MOCK_MODE__ = true;
-            console.log('%c🔧 Running in MOCK MODE with SQLite database', 'color: #ff6b6b; font-weight: bold');
+            try {
+              const mockClient = await createSqliteSupabaseClient({ seed: true });
+              
+              // Inject as the Supabase client
+              window.__SUPABASE_CLIENT__ = mockClient;
+              window.__MOCK_MODE__ = true;
+              
+              console.log('%c🔧 Running in MOCK MODE with SQLite database', 'color: #ff6b6b; font-weight: bold; font-size: 14px');
+              console.log('Available tables: categories, products, orders, site_metadata, profiles');
+            } catch (error) {
+              console.error('Failed to initialize mock database:', error);
+            }
           })();
         </script>
       `;
@@ -148,20 +130,31 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.on('error', (err) => {
-  console.error('Server error:', err);
-  process.exit(1);
-});
+// Try to listen on the specified port, or find an available one
+const tryListen = (port) => {
+  server.listen(port, () => {
+    console.log('\n╔════════════════════════════════════════╗');
+    console.log('║   BAKERY SITE - LOCAL DEV SERVER      ║');
+    console.log('╚════════════════════════════════════════╝\n');
+    console.log(`✓ Server running at http://localhost:${port}`);
+    console.log('✓ Using mock SQLite database with sample data');
+    console.log('✓ No Supabase credentials needed\n');
+    console.log('📝 Sample Data:');
+    console.log('   Categories: חלה, עוגות');
+    console.log('   Products: חלה קלועה, עוגת שוקולד\n');
+    console.log('Press Ctrl+C to stop the server\n');
+  });
 
-server.listen(PORT, () => {
-  console.log('\n╔════════════════════════════════════════╗');
-  console.log('║   BAKERY SITE - LOCAL DEV SERVER      ║');
-  console.log('╚════════════════════════════════════════╝\n');
-  console.log(`✓ Server running at http://localhost:${PORT}`);
-  console.log('✓ Using mock SQLite database with sample data');
-  console.log('✓ No Supabase credentials needed\n');
-  console.log('📝 Sample Data:');
-  console.log('   Categories: חלה, עוגות');
-  console.log('   Products: חלה קלועה, עוגת שוקולד\n');
-  console.log('Press Ctrl+C to stop the server\n');
-});
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️  Port ${port} is already in use, trying ${port + 1}...`);
+      server.close();
+      tryListen(port + 1);
+    } else {
+      console.error('❌ Server error:', err.message);
+      process.exit(1);
+    }
+  });
+};
+
+tryListen(PORT);
