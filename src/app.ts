@@ -103,8 +103,14 @@ const aboutContentEl = document.getElementById("about-content") as HTMLElement |
 const adminAboutInput = document.getElementById("admin-about") as HTMLTextAreaElement | null;
 const adminAboutSave = document.getElementById("admin-about-save") as HTMLElement | null;
 const adminAboutStatus = document.getElementById("admin-about-status") as HTMLElement | null;
+
+// Submission guards to prevent duplicate order creation
+let isCheckoutSubmitting = false;
+let isAdminOrderSubmitting = false;
+
 const checkoutError = document.getElementById("checkout-error") as HTMLElement | null;
 const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
+const checkoutSubmitButton = document.getElementById("whatsapp-submit") as HTMLButtonElement | null;
 const customerNameInput = document.getElementById("customer-name") as HTMLInputElement | null;
 const customerPhoneInput = document.getElementById("customer-phone") as HTMLInputElement | null;
 const orderModal = document.getElementById("order-modal") as HTMLElement | null;
@@ -921,12 +927,59 @@ const isMockMode = () => {
   return Boolean((supabaseClient as any)?.__db || (supabaseClient as any)?.__isMock);
 };
 
-const getNextLocalOrderNumber = () => {
-  const existing = (state.orders || [])
-    .map((order) => Number(order.order_number))
-    .filter((value) => Number.isFinite(value));
-  if (!existing.length) return 1;
-  return Math.max(...existing) + 1;
+// Cross-tab duplicate detection using sessionStorage
+const RECENT_SUBMISSIONS_KEY = 'bakery_recent_submissions';
+const SUBMISSION_WINDOW_MS = 10000; // 10 seconds
+
+const createOrderFingerprint = (orderData: any): string => {
+  // Create a unique fingerprint of the order to detect duplicates
+  const parts = [
+    JSON.stringify(orderData.items?.map((i: any) => `${i.id}:${i.qty}`) || []),
+    orderData.customer?.name || '',
+    orderData.customer?.phone || '',
+    orderData.pickup_date || '',
+    orderData.pickup_time || '',
+    orderData.total || 0,
+  ];
+  return parts.join('|');
+};
+
+const checkRecentSubmission = (fingerprint: string): boolean => {
+  try {
+    const now = Date.now();
+    const stored = sessionStorage.getItem(RECENT_SUBMISSIONS_KEY);
+    const recent = stored ? JSON.parse(stored) : [];
+    
+    // Clean up old entries and check for duplicates
+    const validSubmissions = recent.filter((s: any) => 
+      now - s.time < SUBMISSION_WINDOW_MS
+    );
+    
+    // Check if this fingerprint exists in recent submissions
+    return validSubmissions.some((s: any) => s.fingerprint === fingerprint);
+  } catch {
+    return false;
+  }
+};
+
+const recordSubmission = (fingerprint: string): void => {
+  try {
+    const now = Date.now();
+    const stored = sessionStorage.getItem(RECENT_SUBMISSIONS_KEY);
+    const recent = stored ? JSON.parse(stored) : [];
+    
+    // Clean up old entries
+    const validSubmissions = recent.filter((s: any) => 
+      now - s.time < SUBMISSION_WINDOW_MS
+    );
+    
+    // Add new submission
+    validSubmissions.push({ fingerprint, time: now });
+    
+    sessionStorage.setItem(RECENT_SUBMISSIONS_KEY, JSON.stringify(validSubmissions));
+  } catch {
+    // Ignore storage errors
+  }
 };
 
 const parseAdminOrderItems = () => {
@@ -1049,6 +1102,9 @@ const handleCheckout = async (event: Event) => {
   event.preventDefault();
   if (!ensureSupabase()) return;
   
+  // Prevent duplicate submissions
+  if (isCheckoutSubmitting) return;
+  
   // Check if orders are being accepted
   if (!state.ordersAccepting) {
     if (checkoutError) {
@@ -1112,44 +1168,84 @@ const handleCheckout = async (event: Event) => {
   });
   const links = buildOrderLinks(message);
 
-  const orderId = generateOrderId();
-  const { data: orderData, error } = await supabaseClient.from("orders").insert([
-    {
-      id: orderId,
-      order_number: isMockMode() ? getNextLocalOrderNumber() : undefined,
-      items,
-      total: totalPrice,
-      customer: payload,
-      paid: false,
-      notes: "",
-      user_notes: payload.user_notes,
-      pickup_date: payload.date,
-      pickup_time: payload.time,
-      created_at: new Date().toISOString(),
-    },
-  ]).select("id").single();
+  // Create order fingerprint for cross-tab duplicate detection
+  const orderFingerprint = createOrderFingerprint({
+    items,
+    customer: payload,
+    pickup_date: payload.date,
+    pickup_time: payload.time,
+    total: totalPrice,
+  });
 
-  if (error) {
-    console.error(error);
-    setCheckoutStatus(TECH_SUPPORT_MESSAGE, "error");
+  // Check if this order was recently submitted (cross-tab protection)
+  if (checkRecentSubmission(orderFingerprint)) {
+    if (checkoutError) {
+      checkoutError.textContent = "הזמנה זהה נשלחה לאחרונה. אנא רענן את הדף אם ברצונך לשלוח הזמנה נוספת.";
+      checkoutError.classList.remove("hidden");
+    }
     return;
   }
 
-  await insertOrderItemsForOrder(orderData?.id ?? orderId, items);
+  // Record this submission attempt
+  recordSubmission(orderFingerprint);
 
-  await fetchOrders();
-  closeCart();
-  // Delay modal open slightly to let cart close first (iOS Safari fix)
-  requestAnimationFrame(() => {
+  // Set submitting flag and disable button
+  isCheckoutSubmitting = true;
+  if (checkoutSubmitButton) {
+    checkoutSubmitButton.disabled = true;
+    checkoutSubmitButton.textContent = "שולח...";
+  }
+
+  try {
+    const orderId = generateOrderId();
+    const { data: orderData, error } = await supabaseClient.from("orders").insert([
+      {
+        id: orderId,
+        order_number: undefined, // Will be auto-generated by database trigger
+        items,
+        total: totalPrice,
+        customer: payload,
+        paid: false,
+        notes: "",
+        user_notes: payload.user_notes,
+        pickup_date: payload.date,
+        pickup_time: payload.time,
+        created_at: new Date().toISOString(),
+      },
+    ]).select("id").single();
+
+    if (error) {
+      console.error(error);
+      setCheckoutStatus(TECH_SUPPORT_MESSAGE, "error");
+      return;
+    }
+
+    await insertOrderItemsForOrder(orderData?.id ?? orderId, items);
+
+    await fetchOrders();
+    closeCart();
+    // Delay modal open slightly to let cart close first (iOS Safari fix)
     requestAnimationFrame(() => {
-      openOrderChannelModal(links);
+      requestAnimationFrame(() => {
+        openOrderChannelModal(links);
+      });
     });
-  });
+  } finally {
+    // Re-enable button and reset flag
+    isCheckoutSubmitting = false;
+    if (checkoutSubmitButton) {
+      checkoutSubmitButton.disabled = false;
+      checkoutSubmitButton.textContent = "שלח הזמנה";
+    }
+  }
 };
 
 const handleCreateOrder = async () => {
   if (!ensureSupabase()) return;
   if (!ensureAdmin()) return;
+
+  // Prevent duplicate submissions
+  if (isAdminOrderSubmitting) return;
 
   const name = orderName?.value.trim() || "";
   const createdAt = new Date().toISOString(); // Always use current time
@@ -1193,42 +1289,77 @@ const handleCreateOrder = async () => {
       };
     })
     .filter(Boolean);
-  const orderId = generateOrderId();
-  const { data: orderData, error } = await supabaseClient.from("orders").insert([
-    {
-      id: orderId,
-      order_number: isMockMode() ? getNextLocalOrderNumber() : undefined,
-      items: adminItemsDetailed as any[],
-      total,
-      customer: { name },
-      paid,
-      notes,
-      pickup_date: pickupDate,
-      pickup_time: pickupTime,
-      created_at: createdAt,
-    },
-  ]).select("id").single();
+  
+  // Create order fingerprint for cross-tab duplicate detection
+  const orderFingerprint = createOrderFingerprint({
+    items: adminItemsDetailed,
+    customer: { name },
+    pickup_date: pickupDate,
+    pickup_time: pickupTime,
+    total,
+  });
 
-  if (error) {
-    console.error(error);
-    alert(TECH_SUPPORT_MESSAGE);
+  // Check if this order was recently submitted (cross-tab protection)
+  if (checkRecentSubmission(orderFingerprint)) {
+    alert("הזמנה זהה נשלחה לאחרונה. אנא המתן מספר שניות ונסה שוב.");
     return;
   }
 
-  await insertOrderItemsForOrder(orderData?.id ?? orderId, adminItems, () => {
-    alert(TECH_SUPPORT_MESSAGE);
-  });
+  // Record this submission attempt
+  recordSubmission(orderFingerprint);
+  
+  // Set submitting flag and disable button
+  isAdminOrderSubmitting = true;
+  if (orderSave) {
+    orderSave.setAttribute('disabled', 'true');
+    orderSave.textContent = "שומר...";
+  }
 
-  if (orderName) orderName.value = "";
-  if (orderDate) orderDate.value = "";
-  if (orderPickupDate) orderPickupDate.value = "";
-  if (orderPickupTime) orderPickupTime.value = "";
-  if (orderTotal) orderTotal.value = "";
-  if (orderPaid) orderPaid.checked = false;
-  if (orderNotes) orderNotes.value = "";
-  closeOrderModal();
-  await fetchOrders();
-  renderAdmin();
+  try {
+    const orderId = generateOrderId();
+    const { data: orderData, error } = await supabaseClient.from("orders").insert([
+      {
+        id: orderId,
+        order_number: undefined, // Will be auto-generated by database trigger
+        items: adminItemsDetailed as any[],
+        total,
+        customer: { name },
+        paid,
+        notes,
+        pickup_date: pickupDate,
+        pickup_time: pickupTime,
+        created_at: createdAt,
+      },
+    ]).select("id").single();
+
+    if (error) {
+      console.error(error);
+      alert(TECH_SUPPORT_MESSAGE);
+      return;
+    }
+
+    await insertOrderItemsForOrder(orderData?.id ?? orderId, adminItems, () => {
+      alert(TECH_SUPPORT_MESSAGE);
+    });
+
+    if (orderName) orderName.value = "";
+    if (orderDate) orderDate.value = "";
+    if (orderPickupDate) orderPickupDate.value = "";
+    if (orderPickupTime) orderPickupTime.value = "";
+    if (orderTotal) orderTotal.value = "";
+    if (orderPaid) orderPaid.checked = false;
+    if (orderNotes) orderNotes.value = "";
+    closeOrderModal();
+    await fetchOrders();
+    renderAdmin();
+  } finally {
+    // Re-enable button and reset flag
+    isAdminOrderSubmitting = false;
+    if (orderSave) {
+      orderSave.removeAttribute('disabled');
+      orderSave.textContent = "שמירה";
+    }
+  }
 };
 
 const handleAdminChange = async () => {
