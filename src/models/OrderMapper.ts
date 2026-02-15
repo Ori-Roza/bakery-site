@@ -4,21 +4,20 @@
 
 import type { OrderMessageParams, OrderLinks } from '../types/models';
 import { DEFAULT_WHATSAPP_PHONE, DEFAULT_ORDER_EMAIL } from '../config/constants';
+import { formatDateForDisplay } from '../utils/formatters';
 
 export class OrderMapper {
-  /**
-   * Build order message text for WhatsApp/Email
-   */
   static buildOrderMessage(params: OrderMessageParams): string {
     const { name, phone, date, time, items, totalPrice } = params;
     const lines = items.map((item) => `${item.title} x ${item.qty}`).join("\n");
+    const formattedDate = formatDateForDisplay(date);
 
     return (
-      `שלום יעקב, הזמנה חדשה מהאתר:\n${lines}` +
+      `שלום, הזמנה חדשה מהאתר:\n${lines}` +
       `\nסה"כ לתשלום: ₪${totalPrice}` +
       `\nשם הלקוח: ${name}` +
       `\nטלפון: ${phone}` +
-      `\nמועד איסוף: ${date} בשעה ${time}`
+      `\nמועד איסוף: ${formattedDate} בשעה ${time}`
     );
   }
 

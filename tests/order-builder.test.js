@@ -70,7 +70,7 @@ describe("OrderBuilder", () => {
       };
 
       const message = OrderBuilder.buildOrderMessage(params);
-      expect(message).toContain("2026-01-20");
+      expect(message).toContain("20/01/2026");
       expect(message).toContain("14:30");
     });
 
@@ -199,7 +199,7 @@ describe("OrderBuilder", () => {
   });
 
   describe("buildOrderLinks", () => {
-    const testMessage = "שלום יעקב, הזמנה חדשה";
+    const testMessage = "שלום, הזמנה חדשה";
 
     it("creates WhatsApp URL with message", () => {
       const links = OrderBuilder.buildOrderLinks(testMessage, testContacts);
@@ -286,7 +286,7 @@ describe("OrderBuilder", () => {
       const result = OrderBuilder.buildOrderMessageAndLinks(params);
       expect(result.message).toContain("דוד כהן");
       expect(result.message).toContain("חלה קלועה");
-      expect(result.message).toContain("2026-01-20");
+      expect(result.message).toContain("20/01/2026");
     });
 
     it("links contain WhatsApp and Email URLs", () => {
