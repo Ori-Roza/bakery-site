@@ -104,6 +104,7 @@ const adminAboutInput = document.getElementById("admin-about") as HTMLTextAreaEl
 const adminAboutSave = document.getElementById("admin-about-save") as HTMLElement | null;
 const adminAboutStatus = document.getElementById("admin-about-status") as HTMLElement | null;
 const checkoutError = document.getElementById("checkout-error") as HTMLElement | null;
+const checkoutSuccess = document.getElementById("checkout-success") as HTMLElement | null;
 const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
 const customerNameInput = document.getElementById("customer-name") as HTMLInputElement | null;
 const customerPhoneInput = document.getElementById("customer-phone") as HTMLInputElement | null;
@@ -117,6 +118,11 @@ const deleteConfirmNo = document.getElementById("delete-confirm-no") as HTMLElem
 const orderName = document.getElementById("order-name") as HTMLInputElement | null;
 const orderDate = document.getElementById("order-date") as HTMLInputElement | null;
 const orderTotal = document.getElementById("order-total") as HTMLInputElement | null;
+const orderTotalHint = document.getElementById("order-total-hint") as HTMLElement | null;
+const orderItemProduct = document.getElementById("order-item-product") as HTMLSelectElement | null;
+const orderItemQty = document.getElementById("order-item-qty") as HTMLInputElement | null;
+const orderItemAdd = document.getElementById("order-item-add") as HTMLElement | null;
+const orderItemsList = document.getElementById("order-items-list") as HTMLElement | null;
 const orderPaid = document.getElementById("order-paid") as HTMLInputElement | null;
 const orderNotes = document.getElementById("order-notes") as HTMLTextAreaElement | null;
 const adminSearchInput = document.getElementById("admin-search") as HTMLInputElement | null;
@@ -213,6 +219,8 @@ notesPopover.innerHTML = `
 document.body.appendChild(notesPopover);
 const notesTextarea = notesPopover.querySelector(".notes-textarea") as HTMLTextAreaElement | null;
 let activeNotesInput: HTMLElement | null = null;
+let adminOrderItems: Array<{ id: number | string; qty: number }> = [];
+let adminOrderTotalDirty = false;
 
 // Data mapping functions (use mapper classes)
 const mapDbToProduct = (row: any) => ProductMapper.mapDbToProduct(row);
@@ -861,12 +869,145 @@ const closeOrderChannelModal = () => {
   state.pendingOrderLinks = null;
 };
 
+const generateOrderId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `order_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
+const isMockMode = () => {
+  if (typeof window !== "undefined" && (window as any).__MOCK_MODE__ === true) {
+    return true;
+  }
+  return Boolean((supabaseClient as any)?.__db || (supabaseClient as any)?.__isMock);
+};
+
+const getNextLocalOrderNumber = () => {
+  const existing = (state.orders || [])
+    .map((order) => Number(order.order_number))
+    .filter((value) => Number.isFinite(value));
+  if (!existing.length) return 1;
+  return Math.max(...existing) + 1;
+};
+
+const parseAdminOrderItems = () => {
+  return [...adminOrderItems];
+};
+
+const getAdminProductPrice = (product: any) => {
+  const basePrice = Number(product?.price) || 0;
+  const discount = Number(product?.discountPercentage) || 0;
+  if (discount <= 0) return basePrice;
+  return basePrice * (1 - discount / 100);
+};
+
+const calculateAdminOrderTotal = (items: Array<{ id: number | string; qty: number }>) => {
+  return items.reduce((sum, item) => {
+    const product = state.products.find((p) => String(p.id) === String(item.id));
+    if (!product) return sum;
+    const price = getAdminProductPrice(product);
+    return sum + price * (item.qty || 1);
+  }, 0);
+};
+
+const renderAdminOrderItems = () => {
+  if (orderItemsList) {
+    if (!adminOrderItems.length) {
+      orderItemsList.innerHTML = "<div class='text-xs text-stone-500'>אין מוצרים להזמנה.</div>";
+    } else {
+      orderItemsList.innerHTML = adminOrderItems
+        .map((item) => {
+          const product = state.products.find((p) => String(p.id) === String(item.id));
+          const title = product?.title || "";
+          const price = product ? getAdminProductPrice(product) : 0;
+          const lineTotal = price * (item.qty || 1);
+          return `
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-sm text-stone-700">${title}</div>
+              <div class="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  class="form-input"
+                  value="${item.qty || 1}"
+                  data-order-item-qty="${item.id}"
+                />
+                <span class="text-sm text-stone-600">${formatCurrency(lineTotal)}</span>
+                <button type="button" class="secondary-button" data-order-item-remove="${item.id}">מחק</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  const computedTotal = calculateAdminOrderTotal(adminOrderItems);
+  if (orderTotalHint) {
+    orderTotalHint.textContent = adminOrderItems.length
+      ? `סה"כ מחושב: ${formatCurrency(computedTotal)}`
+      : "";
+  }
+  if (orderTotal && !adminOrderTotalDirty) {
+    orderTotal.value = adminOrderItems.length ? String(Math.round(computedTotal)) : "";
+  }
+};
+
+const seedAdminOrderProductSelect = () => {
+  if (!orderItemProduct) return;
+  const options = state.products
+    .map((product) => {
+      const price = getAdminProductPrice(product);
+      return `<option value="${product.id}">${product.title} (${formatCurrency(price)})</option>`;
+    })
+    .join("");
+  orderItemProduct.innerHTML = options || "";
+};
+
+const insertOrderItemsForOrder = async (
+  orderId: string | null | undefined,
+  items: Array<{ id: number | string; qty: number }>,
+  onError?: () => void
+) => {
+  if (!orderId || !items.length) return { ok: true };
+  const orderItemsPayload = items
+    .map((item) => {
+      const productId = normalizeProductId(item.id);
+      if (!productId) return null;
+      return {
+        order_id: orderId,
+        product_id: productId,
+        qty: item.qty || 1,
+      };
+    })
+    .filter(Boolean);
+
+  if (!orderItemsPayload.length) return { ok: true };
+
+  const { error } = await supabaseClient
+    .from("order_items")
+    .insert(orderItemsPayload as any[]);
+
+  if (error) {
+    console.error(error);
+    onError?.();
+    return { ok: false, error };
+  }
+
+  return { ok: true };
+};
+
 const clearCheckoutState = () => {
   state.cart = CartManager.clearCart();
   if (checkoutForm) {
     checkoutForm.reset();
   }
   updateCartUI();
+  if (checkoutSuccess) {
+    checkoutSuccess.textContent = "";
+    checkoutSuccess.classList.add("hidden");
+  }
 };
 
 const handleCheckout = async (event: Event) => {
@@ -886,6 +1027,10 @@ const handleCheckout = async (event: Event) => {
   if (checkoutError) {
     checkoutError.textContent = "";
     checkoutError.classList.add("hidden");
+  }
+  if (checkoutSuccess) {
+    checkoutSuccess.textContent = "";
+    checkoutSuccess.classList.add("hidden");
   }
   
   const form = event.target as HTMLFormElement;
@@ -939,8 +1084,11 @@ const handleCheckout = async (event: Event) => {
   });
   const links = buildOrderLinks(message);
 
-  const { error } = await supabaseClient.from("orders").insert([
+  const orderId = generateOrderId();
+  const { data: orderData, error } = await supabaseClient.from("orders").insert([
     {
+      id: orderId,
+      order_number: isMockMode() ? getNextLocalOrderNumber() : undefined,
       items,
       total: totalPrice,
       customer: payload,
@@ -948,7 +1096,7 @@ const handleCheckout = async (event: Event) => {
       notes: "",
       user_notes: payload.user_notes,
     },
-  ]);
+  ]).select("id").single();
 
   if (error) {
     console.error(error);
@@ -958,6 +1106,13 @@ const handleCheckout = async (event: Event) => {
     }
     return;
   }
+
+  if (checkoutSuccess) {
+    checkoutSuccess.textContent = "ההזמנה נשלחה בהצלחה";
+    checkoutSuccess.classList.remove("hidden");
+  }
+
+  await insertOrderItemsForOrder(orderData?.id ?? orderId, items);
 
   await fetchOrders();
   closeCart();
@@ -977,7 +1132,7 @@ const handleCreateOrder = async () => {
   const createdAt = orderDate?.value
     ? new Date(orderDate.value).toISOString()
     : new Date().toISOString();
-  const total = Number(orderTotal?.value) || 0;
+  let total = Number(orderTotal?.value) || 0;
   const paid = orderPaid?.checked || false;
   const notes = orderNotes?.value.trim() || "";
 
@@ -986,16 +1141,38 @@ const handleCreateOrder = async () => {
     return;
   }
 
-  const { error } = await supabaseClient.from("orders").insert([
+  const adminItems = parseAdminOrderItems();
+  const computedTotal = calculateAdminOrderTotal(adminItems);
+  if (!adminOrderTotalDirty) {
+    total = computedTotal;
+  }
+  const adminItemsDetailed = adminItems
+    .map((item) => {
+      const product = state.products.find((p) => String(p.id) === String(item.id));
+      if (!product) return null;
+      const price = getAdminProductPrice(product);
+      return {
+        id: product.id,
+        title: product.title,
+        price,
+        qty: item.qty || 1,
+        lineTotal: price * (item.qty || 1),
+      };
+    })
+    .filter(Boolean);
+  const orderId = generateOrderId();
+  const { data: orderData, error } = await supabaseClient.from("orders").insert([
     {
-      items: [],
+      id: orderId,
+      order_number: isMockMode() ? getNextLocalOrderNumber() : undefined,
+      items: adminItemsDetailed as any[],
       total,
       customer: { name },
       paid,
       notes,
       created_at: createdAt,
     },
-  ]);
+  ]).select("id").single();
 
   if (error) {
     console.error(error);
@@ -1003,12 +1180,16 @@ const handleCreateOrder = async () => {
     return;
   }
 
+  await insertOrderItemsForOrder(orderData?.id ?? orderId, adminItems, () => {
+    alert(TECH_SUPPORT_MESSAGE);
+  });
+
   if (orderName) orderName.value = "";
   if (orderDate) orderDate.value = "";
   if (orderTotal) orderTotal.value = "";
   if (orderPaid) orderPaid.checked = false;
   if (orderNotes) orderNotes.value = "";
-  orderModal?.classList.add("hidden");
+  closeOrderModal();
   await fetchOrders();
   renderAdmin();
 };
@@ -1147,6 +1328,44 @@ const handleDeleteProduct = async (id: any) => {
   const productId = normalizeProductId(id);
   if (!productId) {
     alert("מזהה מוצר לא תקין. יש לרענן את הדף.");
+    return;
+  }
+
+  if (isMockMode()) {
+    const { error } = await supabaseClient
+      .from("products")
+      .delete()
+      .eq("id", productId);
+    if (error) {
+      console.error(error);
+      alert(TECH_SUPPORT_MESSAGE);
+      return;
+    }
+    await fetchProducts();
+    renderProducts();
+    renderAdmin();
+    closeModal();
+    return;
+  }
+
+  const { data: relatedOrders, error: relatedOrdersError } = await supabaseClient
+    .from("order_items")
+    .select("order_id, orders(paid, deleted)")
+    .eq("product_id", productId);
+
+  if (relatedOrdersError) {
+    console.error(relatedOrdersError);
+    alert(TECH_SUPPORT_MESSAGE);
+    return;
+  }
+
+  const hasUnpaidOrder = (relatedOrders || []).some((row: any) => {
+    const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
+    return order && order.paid !== true && !order.deleted;
+  });
+
+  if (hasUnpaidOrder) {
+    alert("לא ניתן למחוק מוצר שיש לו הזמנה שלא שולמה.");
     return;
   }
 
@@ -2034,10 +2253,23 @@ const fetchOrders = async () => {
   if (!ensureSupabase()) return;
   if (!state.session) return;
 
-  const { data, error } = await supabaseClient
-    .from("orders")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let { data, error } = isMockMode()
+    ? await supabaseClient
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false })
+    : await supabaseClient
+        .from("orders")
+        .select("*, order_items(order_id, product_id, qty, products(id,title,price,discount_percentage,image,in_stock,category_id))")
+        .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    ({ data, error } = await supabaseClient
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false }));
+  }
 
   if (error) {
     console.error(error);
@@ -2100,12 +2332,20 @@ const updateOrderField = async (id: any, field: string, value: any) => {
 };
 
 const showOrderDetails = (order: any) => {
-  const items = (order.items || [])
-    .map((item: any) => `${item.title} x ${item.qty}`)
+  const relatedItems = Array.isArray(order.order_items) ? order.order_items : [];
+  const items = (relatedItems.length ? relatedItems : (order.items || []))
+    .map((item: any) => {
+      const relatedProduct = Array.isArray(item.products)
+        ? item.products[0]
+        : item.products;
+      const title = relatedProduct?.title || item.title || "";
+      const qty = item.qty || 1;
+      return `${title} x ${qty}`;
+    })
     .join("<br />");
   if (orderDetailsContent) {
     orderDetailsContent.innerHTML = `
-      <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? ""}</div>
+      <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? order.id ?? ""}</div>
       <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
       <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
       <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
@@ -2475,10 +2715,16 @@ const closeCreateModal = () => {
 
 const openOrderModal = () => {
   orderModal?.classList.remove("hidden");
+  adminOrderItems = [];
+  adminOrderTotalDirty = false;
+  seedAdminOrderProductSelect();
+  renderAdminOrderItems();
 };
 
 const closeOrderModal = () => {
   orderModal?.classList.add("hidden");
+  adminOrderItems = [];
+  adminOrderTotalDirty = false;
 };
 
 const openDeleteConfirm = (type: 'product' | 'category' = 'product', id: any = null, name = '') => {
@@ -2801,7 +3047,17 @@ const setupListeners = () => {
       if (!whatsappUrl) return;
       clearCheckoutState();
       closeOrderChannelModal();
-      window.location.href = whatsappUrl;
+      let opened: Window | null = null;
+      try {
+        if (typeof window.open === "function") {
+          opened = window.open(whatsappUrl, "_blank", "noopener");
+        }
+      } catch {
+        opened = null;
+      }
+      if (!opened) {
+        window.location.href = whatsappUrl;
+      }
     });
   }
   if (orderChannelEmail) {
@@ -2817,6 +3073,41 @@ const setupListeners = () => {
   adminNewOrderButton?.addEventListener("click", openOrderModal);
   orderModalClose?.addEventListener("click", closeOrderModal);
   orderSave?.addEventListener("click", handleCreateOrder);
+  orderTotal?.addEventListener("input", () => {
+    adminOrderTotalDirty = true;
+  });
+  orderItemAdd?.addEventListener("click", () => {
+    if (!orderItemProduct) return;
+    const selectedId = orderItemProduct.value;
+    if (!selectedId) return;
+    const qty = Math.max(1, Number(orderItemQty?.value) || 1);
+    const existing = adminOrderItems.find((item) => String(item.id) === String(selectedId));
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      adminOrderItems.push({ id: selectedId, qty });
+    }
+    if (orderItemQty) orderItemQty.value = "1";
+    renderAdminOrderItems();
+  });
+  orderItemsList?.addEventListener("input", (event) => {
+    const target = event.target as HTMLInputElement | null;
+    const productId = target?.dataset?.orderItemQty;
+    if (!productId) return;
+    const qty = Math.max(1, Number(target.value) || 1);
+    const item = adminOrderItems.find((entry) => String(entry.id) === String(productId));
+    if (item) {
+      item.qty = qty;
+      renderAdminOrderItems();
+    }
+  });
+  orderItemsList?.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    const productId = target?.dataset?.orderItemRemove;
+    if (!productId) return;
+    adminOrderItems = adminOrderItems.filter((item) => String(item.id) !== String(productId));
+    renderAdminOrderItems();
+  });
   orderDetailsClose?.addEventListener("click", () => {
     orderDetailsModal?.classList.add("hidden");
   });

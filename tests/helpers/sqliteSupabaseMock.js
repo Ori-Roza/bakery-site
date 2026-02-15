@@ -30,6 +30,12 @@ CREATE TABLE orders (
   deleted INTEGER DEFAULT 0
 );
 
+CREATE TABLE order_items (
+  order_id TEXT,
+  product_id INTEGER,
+  qty INTEGER DEFAULT 1
+);
+
 CREATE TABLE profiles (
   user_id TEXT PRIMARY KEY,
   role TEXT

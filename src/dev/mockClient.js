@@ -20,6 +20,7 @@ const SEED = {
     { id: 104, title: "עוגת גבינה", price: 48, discount_percentage: 15, image: "assets/wheat.png", in_stock: true, category_id: 2 },
   ],
   orders: [],
+  order_items: [],
   profiles: [
     { user_id: "admin-1", role: "admin" },
   ],
