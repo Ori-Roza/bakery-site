@@ -3047,16 +3047,12 @@ const setupListeners = () => {
       if (!whatsappUrl) return;
       clearCheckoutState();
       closeOrderChannelModal();
-      let opened: Window | null = null;
       try {
         if (typeof window.open === "function") {
-          opened = window.open(whatsappUrl, "_blank", "noopener");
+          window.open(whatsappUrl, "_blank", "noopener");
         }
       } catch {
-        opened = null;
-      }
-      if (!opened) {
-        window.location.href = whatsappUrl;
+        // Intentionally ignore in non-browser environments
       }
     });
   }

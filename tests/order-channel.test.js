@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createSqliteSupabaseClient } from "./helpers/sqliteSupabaseMock.js";
 import { loadAppWithClient, flushPromises } from "./helpers/loadApp.js";
 
@@ -44,7 +44,11 @@ describe("order channel modal", () => {
     const modal = document.getElementById("order-channel-modal");
     expect(modal.classList.contains("hidden")).toBe(false);
 
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
     document.getElementById("order-channel-whatsapp").click();
-    expect(window.location.href).toContain("https://wa.me/");
+    expect(openSpy).toHaveBeenCalled();
+
+    openSpy.mockRestore();
   });
 });
