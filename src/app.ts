@@ -104,7 +104,6 @@ const adminAboutInput = document.getElementById("admin-about") as HTMLTextAreaEl
 const adminAboutSave = document.getElementById("admin-about-save") as HTMLElement | null;
 const adminAboutStatus = document.getElementById("admin-about-status") as HTMLElement | null;
 const checkoutError = document.getElementById("checkout-error") as HTMLElement | null;
-const checkoutSuccess = document.getElementById("checkout-success") as HTMLElement | null;
 const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
 const customerNameInput = document.getElementById("customer-name") as HTMLInputElement | null;
 const customerPhoneInput = document.getElementById("customer-phone") as HTMLInputElement | null;
@@ -221,6 +220,7 @@ const notesTextarea = notesPopover.querySelector(".notes-textarea") as HTMLTextA
 let activeNotesInput: HTMLElement | null = null;
 let adminOrderItems: Array<{ id: number | string; qty: number }> = [];
 let adminOrderTotalDirty = false;
+let checkoutStatusTimer: number | null = null;
 
 // Data mapping functions (use mapper classes)
 const mapDbToProduct = (row: any) => ProductMapper.mapDbToProduct(row);
@@ -869,6 +869,38 @@ const closeOrderChannelModal = () => {
   state.pendingOrderLinks = null;
 };
 
+const clearCheckoutStatus = () => {
+  if (!checkoutError) return;
+  checkoutError.textContent = "";
+  checkoutError.className = "text-sm text-rose-600 hidden mt-2";
+  if (checkoutStatusTimer) {
+    window.clearTimeout(checkoutStatusTimer);
+    checkoutStatusTimer = null;
+  }
+};
+
+const setCheckoutStatus = (
+  message: string,
+  variant: "error" | "success",
+  autoHideMs?: number
+) => {
+  if (!checkoutError) return;
+  checkoutError.textContent = message;
+  checkoutError.className = `text-sm mt-2 ${
+    variant === "error" ? "text-rose-600" : "text-green-600"
+  }`;
+  checkoutError.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (checkoutStatusTimer) {
+    window.clearTimeout(checkoutStatusTimer);
+    checkoutStatusTimer = null;
+  }
+  if (autoHideMs) {
+    checkoutStatusTimer = window.setTimeout(() => {
+      clearCheckoutStatus();
+    }, autoHideMs);
+  }
+};
+
 const generateOrderId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -1004,10 +1036,7 @@ const clearCheckoutState = () => {
     checkoutForm.reset();
   }
   updateCartUI();
-  if (checkoutSuccess) {
-    checkoutSuccess.textContent = "";
-    checkoutSuccess.classList.add("hidden");
-  }
+  clearCheckoutStatus();
 };
 
 const handleCheckout = async (event: Event) => {
@@ -1023,15 +1052,8 @@ const handleCheckout = async (event: Event) => {
     return;
   }
   
-  // Clear any previous error
-  if (checkoutError) {
-    checkoutError.textContent = "";
-    checkoutError.classList.add("hidden");
-  }
-  if (checkoutSuccess) {
-    checkoutSuccess.textContent = "";
-    checkoutSuccess.classList.add("hidden");
-  }
+  // Clear any previous status
+  clearCheckoutStatus();
   
   const form = event.target as HTMLFormElement;
   const formData = new FormData(form);
@@ -1095,21 +1117,14 @@ const handleCheckout = async (event: Event) => {
       paid: false,
       notes: "",
       user_notes: payload.user_notes,
+      created_at: new Date().toISOString(),
     },
   ]).select("id").single();
 
   if (error) {
     console.error(error);
-    if (checkoutError) {
-      checkoutError.textContent = TECH_SUPPORT_MESSAGE;
-      checkoutError.classList.remove("hidden");
-    }
+    setCheckoutStatus(TECH_SUPPORT_MESSAGE, "error");
     return;
-  }
-
-  if (checkoutSuccess) {
-    checkoutSuccess.textContent = "ההזמנה נשלחה בהצלחה";
-    checkoutSuccess.classList.remove("hidden");
   }
 
   await insertOrderItemsForOrder(orderData?.id ?? orderId, items);
@@ -2251,7 +2266,6 @@ const _fetchFeaturedProducts = async () => {
 
 const fetchOrders = async () => {
   if (!ensureSupabase()) return;
-  if (!state.session) return;
 
   let { data, error } = isMockMode()
     ? await supabaseClient
@@ -3047,6 +3061,7 @@ const setupListeners = () => {
       if (!whatsappUrl) return;
       clearCheckoutState();
       closeOrderChannelModal();
+      setCheckoutStatus("ההזמנה נשלחה בהצלחה", "success", 4000);
       try {
         if (typeof window.open === "function") {
           window.open(whatsappUrl, "_blank", "noopener");
@@ -3062,6 +3077,7 @@ const setupListeners = () => {
       if (!emailUrl) return;
       clearCheckoutState();
       closeOrderChannelModal();
+      setCheckoutStatus("ההזמנה נשלחה בהצלחה", "success", 4000);
       window.location.href = emailUrl;
     });
   }
