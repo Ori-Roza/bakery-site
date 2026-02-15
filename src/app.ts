@@ -796,6 +796,11 @@ const setAdminView = (view: "stats" | "manage") => {
   adminManageView?.classList.toggle("hidden", view !== "manage");
   adminViewStatsBtn?.classList.toggle("active", view === "stats");
   adminViewManageBtn?.classList.toggle("active", view === "manage");
+  
+  // Render statistics when switching to stats view
+  if (view === "stats") {
+    renderStatistics();
+  }
 };
 
 const formatStatsDate = (value: Date): string =>
@@ -2802,8 +2807,8 @@ const openAdminIfSession = async () => {
   setAdminUI(isAdmin);
   if (isAdmin) {
     adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
-    setAdminView(state.adminView === "manage" ? "manage" : "stats");
     await fetchOrders();
+    setAdminView(state.adminView === "manage" ? "manage" : "stats");
     renderAdmin();
   }
 };
@@ -3974,6 +3979,13 @@ const init = async () => {
   
   await fetchProducts();
   console.log("[init] After fetchProducts, state.products.length:", state.products.length);
+
+  // In dev mode, also fetch orders to populate statistics dashboard
+  if (isMockMode()) {
+    await fetchOrders();
+    console.log("[init] After fetchOrders (mock mode), state.orders.length:", state.orders.length);
+  }
+
   renderProducts();
   updateCartUI();
   if (supabaseClient) {
@@ -3982,6 +3994,15 @@ const init = async () => {
     });
   }
   await openAdminIfSession();
+  
+  // In mock mode, auto-enable admin with stats view if no session exists
+  if (isMockMode() && !state.session) {
+    state.session = { user: { id: 'mock-admin', email: 'admin@bakery.local' } } as any;
+    state.role = 'admin';
+    setAdminUI(true);
+    setAdminView('stats');
+    console.log('[init] Auto-login for mock mode admin access');
+  }
   const productHeaders = document.getElementById("admin-products-table");
   const orderHeaders = document.getElementById("admin-orders-table");
   if (productHeaders) {
