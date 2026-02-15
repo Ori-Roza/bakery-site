@@ -116,6 +116,8 @@ const deleteConfirmYes = document.getElementById("delete-confirm-yes") as HTMLEl
 const deleteConfirmNo = document.getElementById("delete-confirm-no") as HTMLElement | null;
 const orderName = document.getElementById("order-name") as HTMLInputElement | null;
 const orderDate = document.getElementById("order-date") as HTMLInputElement | null;
+const orderPickupDate = document.getElementById("order-pickup-date") as HTMLInputElement | null;
+const orderPickupTime = document.getElementById("order-pickup-time") as HTMLInputElement | null;
 const orderTotal = document.getElementById("order-total") as HTMLInputElement | null;
 const orderTotalHint = document.getElementById("order-total-hint") as HTMLElement | null;
 const orderItemProduct = document.getElementById("order-item-product") as HTMLSelectElement | null;
@@ -1117,6 +1119,8 @@ const handleCheckout = async (event: Event) => {
       paid: false,
       notes: "",
       user_notes: payload.user_notes,
+      pickup_date: payload.date,
+      pickup_time: payload.time,
       created_at: new Date().toISOString(),
     },
   ]).select("id").single();
@@ -1147,12 +1151,24 @@ const handleCreateOrder = async () => {
   const createdAt = orderDate?.value
     ? new Date(orderDate.value).toISOString()
     : new Date().toISOString();
+  const pickupDate = orderPickupDate?.value || "";
+  const pickupTime = orderPickupTime?.value || "";
   let total = Number(orderTotal?.value) || 0;
   const paid = orderPaid?.checked || false;
   const notes = orderNotes?.value.trim() || "";
 
   if (!name) {
     alert("יש להזין שם.");
+    return;
+  }
+
+  if (!pickupDate) {
+    alert("יש לבחור תאריך איסוף.");
+    return;
+  }
+
+  if (!pickupTime) {
+    alert("יש לבחור שעת איסוף.");
     return;
   }
 
@@ -1185,6 +1201,8 @@ const handleCreateOrder = async () => {
       customer: { name },
       paid,
       notes,
+      pickup_date: pickupDate,
+      pickup_time: pickupTime,
       created_at: createdAt,
     },
   ]).select("id").single();
@@ -1201,6 +1219,8 @@ const handleCreateOrder = async () => {
 
   if (orderName) orderName.value = "";
   if (orderDate) orderDate.value = "";
+  if (orderPickupDate) orderPickupDate.value = "";
+  if (orderPickupTime) orderPickupTime.value = "";
   if (orderTotal) orderTotal.value = "";
   if (orderPaid) orderPaid.checked = false;
   if (orderNotes) orderNotes.value = "";

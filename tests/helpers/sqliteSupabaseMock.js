@@ -20,6 +20,8 @@ CREATE TABLE products (
 CREATE TABLE orders (
   id TEXT PRIMARY KEY,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  pickup_date TEXT,
+  pickup_time TEXT,
   items TEXT,
   total NUMERIC,
   customer TEXT,

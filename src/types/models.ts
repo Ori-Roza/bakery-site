@@ -65,8 +65,8 @@ export interface Order {
     name: string;
     phone: string;
   };
-  pickup_date?: string;
-  pickup_time?: string;
+  pickup_date: string;
+  pickup_time: string;
   total_price?: number;
   total?: number;
   paid: boolean;

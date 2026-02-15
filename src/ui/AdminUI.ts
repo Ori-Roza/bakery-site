@@ -139,6 +139,9 @@ export class AdminUI {
       } else if (orderKey === "created_at") {
         left = new Date(a.created_at).getTime();
         right = new Date(b.created_at).getTime();
+      } else if (orderKey === "pickup_date") {
+        left = new Date(a.pickup_date).getTime();
+        right = new Date(b.pickup_date).getTime();
       } else if (orderKey === "order_number") {
         left = Number(a.order_number) || 0;
         right = Number(b.order_number) || 0;
@@ -178,6 +181,7 @@ export class AdminUI {
         <td>${order.order_number ?? order.id ?? ""}</td>
         <td>${order.customer?.name || 'Unknown'}</td>
         <td>${AdminUI.formatOrderDate(order.created_at)}</td>
+        <td>${order.pickup_date ? new Date(order.pickup_date).toLocaleString("he-IL", { year: "numeric", month: "2-digit", day: "2-digit" }) + " " + (order.pickup_time || "") : "-"}</td>
         <td class="text-amber-900 font-semibold">${formatCurrency(
           order.total ?? 0
         )}</td>

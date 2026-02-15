@@ -7,11 +7,18 @@ const seedAdminOrders = (db) => {
     "admin-1",
     "admin"
   );
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const pickupDate = tomorrowDate.toISOString().split('T')[0];
+  const pickupTime = "12:00";
+  
   db.prepare(
-    "INSERT INTO orders (id, created_at, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO orders (id, created_at, pickup_date, pickup_time, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(
     "order-1",
     new Date().toISOString(),
+    pickupDate,
+    pickupTime,
     JSON.stringify([{ title: "חלה", qty: 1 }]),
     10,
     JSON.stringify({ name: "לקוח" }),
@@ -22,10 +29,12 @@ const seedAdminOrders = (db) => {
     0
   );
   db.prepare(
-    "INSERT INTO orders (id, created_at, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO orders (id, created_at, pickup_date, pickup_time, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(
     "order-2",
     new Date().toISOString(),
+    pickupDate,
+    pickupTime,
     JSON.stringify([{ title: "עוגה", qty: 2 }]),
     20,
     JSON.stringify({ name: "לקוח 2" }),
@@ -52,6 +61,14 @@ describe("admin orders", () => {
 
     document.getElementById("admin-new-order").click();
     document.getElementById("order-name").value = "לקוח חדש";
+    
+    // Set pickup date and time (tomorrow at 12:00)
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const pickupDateStr = tomorrowDate.toISOString().split('T')[0];
+    document.getElementById("order-pickup-date").value = pickupDateStr;
+    document.getElementById("order-pickup-time").value = "12:00";
+    
     document.getElementById("order-total").value = "35";
     document.getElementById("order-save").click();
     await flushPromises();

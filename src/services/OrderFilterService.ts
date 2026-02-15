@@ -33,7 +33,18 @@ const FILTER_FIELDS: Record<string, FilterFieldDef> = {
   },
   created_at: {
     name: 'created_at',
-    label: 'תאריך',
+    label: 'תאריך יצירה',
+    type: 'date',
+    operators: [
+      { value: 'isOn', label: 'בתאריך' },
+      { value: 'before', label: 'לפני' },
+      { value: 'after', label: 'אחרי' },
+      { value: 'between', label: 'בין' },
+    ],
+  },
+  pickup_date: {
+    name: 'pickup_date',
+    label: 'תאריך איסוף',
     type: 'date',
     operators: [
       { value: 'isOn', label: 'בתאריך' },
@@ -328,7 +339,7 @@ export function formatFilterForDisplay(filter: OrderFilter): string {
   const operatorLabel = operatorDef?.label || filter.operator;
 
   let valueStr = '';
-  if (filter.field === 'created_at' || filter.field === 'total') {
+  if (filter.field === 'created_at' || filter.field === 'pickup_date' || filter.field === 'total') {
     if (Array.isArray(filter.value)) {
       if (filter.operator === 'between' || filter.operator === 'betweenDates') {
         valueStr = `${filter.value[0]} - ${filter.value[1]}`;
