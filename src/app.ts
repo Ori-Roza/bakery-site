@@ -1,4 +1,19 @@
 import { formatCurrency, formatDateForInput } from './utils/formatters';
+import {
+  buildCustomRange,
+  buildDailySeries,
+  computeAverageOrders,
+  computeKpis,
+  computeMonthlySeasonality,
+  computePickupHourDistribution,
+  computePopularProducts,
+  filterOrdersByRange,
+  getDateRange,
+  getOrderTotal,
+  getPreviousDateRange,
+  type StatsRangeKey,
+  type StatsSeriesKey,
+} from './utils/statistics';
 import { 
   getNextBusinessDateTime,
   getPickupDateTime 
@@ -86,6 +101,31 @@ const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") 
 const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
 const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
 const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const adminViewStatsBtn = document.getElementById("admin-view-stats") as HTMLElement | null;
+const adminViewManageBtn = document.getElementById("admin-view-manage") as HTMLElement | null;
+const adminStatsView = document.getElementById("admin-stats-view") as HTMLElement | null;
+const adminManageView = document.getElementById("admin-manage-view") as HTMLElement | null;
+const statsRangeSelect = document.getElementById("stats-range") as HTMLSelectElement | null;
+const statsRangeStartInput = document.getElementById("stats-range-start") as HTMLInputElement | null;
+const statsRangeEndInput = document.getElementById("stats-range-end") as HTMLInputElement | null;
+const statsOrdersValue = document.getElementById("stats-orders-value") as HTMLElement | null;
+const statsRevenueValue = document.getElementById("stats-revenue-value") as HTMLElement | null;
+const statsConversionValue = document.getElementById("stats-conversion-value") as HTMLElement | null;
+const statsAovValue = document.getElementById("stats-aov-value") as HTMLElement | null;
+const statsOrdersDelta = document.getElementById("stats-orders-delta") as HTMLElement | null;
+const statsRevenueDelta = document.getElementById("stats-revenue-delta") as HTMLElement | null;
+const statsAovDelta = document.getElementById("stats-aov-delta") as HTMLElement | null;
+const statsTrendChart = document.getElementById("stats-trend-chart") as HTMLElement | null;
+const statsTrendLegend = document.getElementById("stats-trend-legend") as HTMLElement | null;
+const statsPopularList = document.getElementById("stats-popular-list") as HTMLElement | null;
+const statsPickupChart = document.getElementById("stats-pickup-chart") as HTMLElement | null;
+const statsAvgDay = document.getElementById("stats-avg-day") as HTMLElement | null;
+const statsAvgWeek = document.getElementById("stats-avg-week") as HTMLElement | null;
+const statsSeasonalityChart = document.getElementById("stats-seasonality-chart") as HTMLElement | null;
+const statsLatestOrders = document.getElementById("stats-latest-orders") as HTMLElement | null;
+const statsSeriesButtons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("[data-stats-series]")
+);
 const adminOrdersFilterModal = document.getElementById("admin-orders-filter-modal") as HTMLElement | null;
 const adminFilterModalClose = document.getElementById("admin-filter-modal-close") as HTMLElement | null;
 const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
@@ -744,6 +784,283 @@ const renderAdmin = () => {
     `;
     adminOrdersEl.appendChild(row);
   });
+
+  renderStatistics();
+};
+
+const setAdminView = (view: "stats" | "manage") => {
+  state.adminView = view;
+  adminStatsView?.classList.toggle("hidden", view !== "stats");
+  adminManageView?.classList.toggle("hidden", view !== "manage");
+  adminViewStatsBtn?.classList.toggle("active", view === "stats");
+  adminViewManageBtn?.classList.toggle("active", view === "manage");
+  
+  // Render statistics when switching to stats view
+  if (view === "stats") {
+    renderStatistics();
+  }
+};
+
+const formatStatsDate = (value: Date): string =>
+  value.toLocaleDateString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const statsStartOfDay = (value: Date): Date =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate());
+
+const statsEndOfDay = (value: Date): Date =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
+
+const getPreviousStatsRange = (range: { start: Date; end: Date }, key: StatsRangeKey) => {
+  if (key !== "custom") {
+    return getPreviousDateRange(key);
+  }
+  const start = statsStartOfDay(range.start);
+  const end = statsStartOfDay(range.end);
+  const dayMs = 1000 * 60 * 60 * 24;
+  const days = Math.max(0, Math.round((end.getTime() - start.getTime()) / dayMs));
+  const prevEnd = statsEndOfDay(new Date(start.getTime() - dayMs));
+  const prevStart = statsStartOfDay(new Date(start.getTime() - (days + 1) * dayMs));
+  return { start: prevStart, end: prevEnd };
+};
+
+const formatDeltaText = (value: number) => {
+  const rounded = Math.abs(value) < 0.05 ? 0 : value;
+  if (rounded === 0) {
+    return { text: "ללא שינוי", className: "" };
+  }
+  const direction = rounded > 0 ? "עלייה" : "ירידה";
+  const className = rounded > 0 ? "positive" : "negative";
+  return {
+    text: `${direction} של ${Math.abs(rounded).toFixed(1)}%`,
+    className,
+  };
+};
+
+const renderBarSeries = (
+  container: HTMLElement | null,
+  entries: Array<{ label: string; value: number }>,
+  labelEvery = 1
+): void => {
+  if (!container) return;
+  if (!entries.length) {
+    container.innerHTML =
+      "<div class='text-sm text-stone-500 w-full text-center'>אין נתונים להצגה</div>";
+    return;
+  }
+
+  const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
+  container.innerHTML = entries
+    .map((entry, index) => {
+      const pct = Math.max(4, (entry.value / maxValue) * 100);
+      const label = index % labelEvery === 0 ? entry.label : "";
+      const title = `${entry.label} · ${entry.value}`;
+      return `
+        <div class="stats-bar-group" title="${title}">
+          <div class="stats-bar" style="height: ${pct}%"></div>
+          <div class="stats-bar-label">${label}</div>
+        </div>
+      `;
+    })
+    .join("");
+};
+
+const getStatsItemTitle = (item: any): string => {
+  if (!item) return "-";
+  if (item.title) return String(item.title);
+  if (item.products) {
+    const related = Array.isArray(item.products) ? item.products[0] : item.products;
+    if (related?.title) return String(related.title);
+  }
+  return "-";
+};
+
+const renderStatistics = () => {
+  if (!statsOrdersValue || !statsTrendChart) return;
+
+  const selectedRange =
+    (statsRangeSelect?.value || state.statsRange || "this_month") as StatsRangeKey;
+  state.statsRange = selectedRange;
+  if (statsRangeSelect && statsRangeSelect.value !== selectedRange) {
+    statsRangeSelect.value = selectedRange;
+  }
+
+  const baseRange = getDateRange(
+    selectedRange === "custom" ? "this_month" : selectedRange
+  );
+
+  if (statsRangeStartInput && statsRangeEndInput) {
+    if (selectedRange !== "custom") {
+      statsRangeStartInput.value = formatDateForInput(baseRange.start);
+      statsRangeEndInput.value = formatDateForInput(baseRange.end);
+      state.statsRangeStart = statsRangeStartInput.value;
+      state.statsRangeEnd = statsRangeEndInput.value;
+    } else {
+      if (!statsRangeStartInput.value && !statsRangeEndInput.value) {
+        statsRangeStartInput.value = state.statsRangeStart || formatDateForInput(baseRange.start);
+        statsRangeEndInput.value = state.statsRangeEnd || formatDateForInput(baseRange.end);
+        state.statsRangeStart = statsRangeStartInput.value;
+        state.statsRangeEnd = statsRangeEndInput.value;
+      }
+      if (state.statsRangeStart && !statsRangeStartInput.value) {
+        statsRangeStartInput.value = state.statsRangeStart;
+      }
+      if (state.statsRangeEnd && !statsRangeEndInput.value) {
+        statsRangeEndInput.value = state.statsRangeEnd;
+      }
+    }
+  }
+
+  const selectedSeries = (state.statsSeries || "revenue") as StatsSeriesKey;
+  const range = buildCustomRange(
+    statsRangeStartInput?.value,
+    statsRangeEndInput?.value,
+    baseRange
+  );
+  const previousRange = getPreviousStatsRange(range, selectedRange);
+  const rangeOrders = filterOrdersByRange(state.orders, range);
+  const previousOrders = filterOrdersByRange(state.orders, previousRange);
+  const kpis = computeKpis(rangeOrders, previousOrders);
+
+  statsOrdersValue.textContent = String(kpis.totalOrders);
+  if (statsRevenueValue) {
+    statsRevenueValue.textContent = formatCurrency(kpis.totalRevenue);
+  }
+  if (statsConversionValue) {
+    statsConversionValue.textContent = `${kpis.conversionRate.toFixed(1)}%`;
+  }
+  if (statsAovValue) {
+    statsAovValue.textContent = formatCurrency(kpis.averageOrderValue);
+  }
+
+  const applyDelta = (el: HTMLElement | null, value: number) => {
+    if (!el) return;
+    const { text, className } = formatDeltaText(value);
+    el.textContent = text;
+    el.classList.remove("positive", "negative");
+    if (className) {
+      el.classList.add(className);
+    }
+  };
+
+  applyDelta(statsOrdersDelta, kpis.deltaOrders);
+  applyDelta(statsRevenueDelta, kpis.deltaRevenue);
+  applyDelta(statsAovDelta, kpis.deltaAverageOrder);
+
+  statsSeriesButtons.forEach((button) => {
+    const isActive = button.dataset.statsSeries === selectedSeries;
+    button.classList.toggle("active", isActive);
+  });
+
+  const series = buildDailySeries(rangeOrders, range);
+  const seriesEntries = series.map((entry) => ({
+    label: entry.label,
+    value: selectedSeries === "revenue" ? entry.revenue : entry.orders,
+  }));
+  const labelEvery = Math.max(1, Math.ceil(seriesEntries.length / 8));
+  renderBarSeries(statsTrendChart, seriesEntries, labelEvery);
+
+  if (statsTrendLegend) {
+    statsTrendLegend.textContent = `טווח: ${formatStatsDate(
+      range.start
+    )} - ${formatStatsDate(range.end)}`;
+  }
+
+  if (statsPopularList) {
+    const popular = computePopularProducts(rangeOrders, 5);
+    if (!popular.length) {
+      statsPopularList.innerHTML =
+        "<div class='text-sm text-stone-500'>אין נתונים להצגה</div>";
+    } else {
+      statsPopularList.innerHTML = popular
+        .map((item) => {
+          const width = Math.max(6, item.share);
+          return `
+            <div class="stats-list-item">
+              <div class="stats-list-header">
+                <span>${item.title}</span>
+                <span>${item.qty} · ${item.share.toFixed(1)}%</span>
+              </div>
+              <div class="stats-list-bar">
+                <div class="stats-list-bar-fill" style="width: ${width}%"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  renderBarSeries(
+    statsPickupChart,
+    computePickupHourDistribution(rangeOrders).map((entry) => ({
+      label: entry.label,
+      value: entry.count,
+    })),
+    1
+  );
+
+  const averages = computeAverageOrders(rangeOrders, range);
+  if (statsAvgDay) {
+    statsAvgDay.textContent = averages.perDay.toFixed(1);
+  }
+  if (statsAvgWeek) {
+    statsAvgWeek.textContent = averages.perWeek.toFixed(1);
+  }
+
+  renderBarSeries(
+    statsSeasonalityChart,
+    computeMonthlySeasonality(state.orders).map((entry) => ({
+      label: entry.label,
+      value: entry.count,
+    })),
+    1
+  );
+
+  if (statsLatestOrders) {
+    const latest = [...rangeOrders]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 6);
+
+    if (!latest.length) {
+      statsLatestOrders.innerHTML =
+        "<tr><td colspan='7' class='text-sm text-stone-500'>אין נתונים להצגה</td></tr>";
+    } else {
+      statsLatestOrders.innerHTML = latest
+        .map((order) => {
+          const relatedItems = Array.isArray(order.order_items) ? order.order_items : [];
+          const items = relatedItems.length ? relatedItems : order.items || [];
+          const firstItem = items[0] as any;
+          const title = getStatsItemTitle(firstItem);
+          const extraCount = items.length > 1 ? ` ועוד ${items.length - 1}` : "";
+          const total = getOrderTotal(order);
+          const status = order.deleted
+            ? { label: "בוטל", className: "cancelled" }
+            : order.paid
+            ? { label: "הושלם", className: "completed" }
+            : { label: "ממתין", className: "pending" };
+          return `
+            <tr>
+              <td>${title}${extraCount}</td>
+              <td>${order.order_number ?? order.id ?? ""}</td>
+              <td>${formatStatsDate(new Date(order.created_at))}</td>
+              <td>${order.customer?.name || ""}</td>
+              <td><span class="stats-status-pill ${status.className}">${status.label}</span></td>
+              <td>${formatCurrency(total)}</td>
+              <td>
+                <button class="secondary-button text-xs" data-stats-action="view-order" data-order-id="${
+                  order.id
+                }">צפייה</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+  }
 };
 
 const updateRoute = () => {
@@ -1587,6 +1904,7 @@ const handleAdminLogin = async (event: Event) => {
   adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
 
   setAdminUI(true);
+  setAdminView(state.adminView === "manage" ? "manage" : "stats");
   await fetchOrders();
   renderAdmin();
 };
@@ -2479,6 +2797,7 @@ const openAdminIfSession = async () => {
   if (isAdmin) {
     adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
     await fetchOrders();
+    setAdminView(state.adminView === "manage" ? "manage" : "stats");
     renderAdmin();
   }
 };
@@ -3399,6 +3718,53 @@ const setupListeners = () => {
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
   });
 
+  adminViewStatsBtn?.addEventListener("click", () => {
+    setAdminView("stats");
+  });
+  adminViewManageBtn?.addEventListener("click", () => {
+    setAdminView("manage");
+  });
+
+  statsRangeSelect?.addEventListener("change", () => {
+    state.statsRange = statsRangeSelect.value;
+    renderStatistics();
+  });
+
+  statsRangeStartInput?.addEventListener("change", () => {
+    state.statsRangeStart = statsRangeStartInput.value;
+    if (statsRangeSelect) statsRangeSelect.value = "custom";
+    state.statsRange = "custom";
+    renderStatistics();
+  });
+
+  statsRangeEndInput?.addEventListener("change", () => {
+    state.statsRangeEnd = statsRangeEndInput.value;
+    if (statsRangeSelect) statsRangeSelect.value = "custom";
+    state.statsRange = "custom";
+    renderStatistics();
+  });
+
+  statsSeriesButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const series = button.dataset.statsSeries as StatsSeriesKey | undefined;
+      if (!series) return;
+      state.statsSeries = series;
+      renderStatistics();
+    });
+  });
+
+  statsLatestOrders?.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement | null)?.closest(
+      "button[data-stats-action='view-order']"
+    ) as HTMLElement | null;
+    if (!button) return;
+    const orderId = button.dataset.orderId;
+    if (!orderId) return;
+    const order = state.orders.find((item) => String(item.id) === String(orderId));
+    if (!order) return;
+    showOrderDetails(order);
+  });
+
   if (productSearchInput) {
 
     productSearchInput.addEventListener("input", renderProducts);
@@ -3602,6 +3968,13 @@ const init = async () => {
   
   await fetchProducts();
   console.log("[init] After fetchProducts, state.products.length:", state.products.length);
+
+  // In dev mode, also fetch orders to populate statistics dashboard
+  if (isMockMode()) {
+    await fetchOrders();
+    console.log("[init] After fetchOrders (mock mode), state.orders.length:", state.orders.length);
+  }
+
   renderProducts();
   updateCartUI();
   if (supabaseClient) {
@@ -3610,6 +3983,17 @@ const init = async () => {
     });
   }
   await openAdminIfSession();
+  
+  // In mock mode, auto-enable admin with stats view if no session exists
+  if (isMockMode() && !state.session) {
+    state.session = { user: { id: 'mock-admin', email: 'admin@bakery.local' } } as any;
+    state.role = 'admin';
+    adminGreetingEl && (adminGreetingEl.textContent = `Hello admin@bakery.local`);
+    setAdminUI(true);
+    renderAdmin();
+    setAdminView('stats');
+    console.log('[init] Auto-login for mock mode admin access');
+  }
   const productHeaders = document.getElementById("admin-products-table");
   const orderHeaders = document.getElementById("admin-orders-table");
   if (productHeaders) {

@@ -314,21 +314,164 @@
           </div>
 
           <div id="admin-panel" class="admin-grid hidden">
-            <div class="admin-card">
-              <div class="flex items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-200">
-                <div>
-                  <h4 class="admin-title mb-1">קבלת הזמנות</h4>
-                  <p class="text-sm text-stone-600">הפעל/כבה את האפשרות לקבל הזמנות חדשות</p>
+            <div class="admin-view-tabs">
+              <button id="admin-view-manage" class="secondary-button admin-view-tab">
+                ניהול
+              </button>
+              <button id="admin-view-stats" class="secondary-button admin-view-tab">
+                סטטיסטיקות
+              </button>
+            </div>
+
+            <div id="admin-stats-view" class="admin-view">
+              <div id="admin-stats" class="admin-card stats-card">
+                <div class="stats-header">
+                  <div>
+                    <h4 class="admin-title mb-1">סטטיסטיקות</h4>
+                  </div>
+                  <div class="stats-range">
+                    <label for="stats-range" class="form-label text-sm">טווח תאריכים</label>
+                    <select id="stats-range" class="form-input">
+                      <option value="this_month">החודש הנוכחי</option>
+                      <option value="last_30_days">30 הימים האחרונים</option>
+                      <option value="last_90_days">90 הימים האחרונים</option>
+                      <option value="this_year">השנה הנוכחית</option>
+                      <option value="custom">מותאם אישית</option>
+                    </select>
+                    <div class="stats-range-inputs">
+                      <div>
+                        <label for="stats-range-start" class="form-label text-xs">מ־</label>
+                        <input id="stats-range-start" type="date" class="form-input" />
+                      </div>
+                      <div>
+                        <label for="stats-range-end" class="form-label text-xs">עד</label>
+                        <input id="stats-range-end" type="date" class="form-input" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="orders-accepting-toggle" class="sr-only peer" checked>
-                  <div class="w-11 h-6 bg-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                  <span id="orders-accepting-label" class="ms-3 text-sm font-medium text-stone-700">פתוח</span>
-                </label>
+
+                <div class="stats-kpi-grid">
+                  <div class="stats-kpi-card">
+                    <div class="stats-kpi-title">הזמנות החודש</div>
+                    <div id="stats-orders-value" class="stats-kpi-value">0</div>
+                    <div class="stats-kpi-subtitle">בהשוואה לחודש הקודם</div>
+                    <div id="stats-orders-delta" class="stats-kpi-delta"></div>
+                  </div>
+                  <div class="stats-kpi-card">
+                    <div class="stats-kpi-title">הכנסות החודש</div>
+                    <div id="stats-revenue-value" class="stats-kpi-value">₪0</div>
+                    <div class="stats-kpi-subtitle">בהשוואה לתקופה הקודמת</div>
+                    <div id="stats-revenue-delta" class="stats-kpi-delta"></div>
+                  </div>
+                  <div class="stats-kpi-card">
+                    <div class="stats-kpi-title">שיעור המרה</div>
+                    <div id="stats-conversion-value" class="stats-kpi-value">0%</div>
+                    <div class="stats-kpi-subtitle">אחוז המבקרים שביצעו הזמנה</div>
+                  </div>
+                  <div class="stats-kpi-card">
+                    <div class="stats-kpi-title">ערך הזמנה ממוצע</div>
+                    <div id="stats-aov-value" class="stats-kpi-value">₪0</div>
+                    <div class="stats-kpi-subtitle">בהשוואה לתקופה הקודמת</div>
+                    <div id="stats-aov-delta" class="stats-kpi-delta"></div>
+                  </div>
+                </div>
+
+                <div class="stats-main-grid">
+                  <div class="stats-section">
+                    <div class="stats-section-header">
+                      <h5 class="stats-section-title">מגמת הכנסות</h5>
+                      <div class="stats-toggle">
+                        <button class="stats-toggle-btn active" data-stats-series="revenue">הכנסות</button>
+                        <button class="stats-toggle-btn" data-stats-series="orders">כמות הזמנות</button>
+                      </div>
+                    </div>
+                    <div id="stats-trend-chart" class="stats-chart"></div>
+                    <div id="stats-trend-legend" class="stats-legend"></div>
+                  </div>
+                  <div class="stats-section">
+                    <div class="stats-section-header">
+                      <h5 class="stats-section-title">מוצרים פופולריים</h5>
+                    </div>
+                    <div id="stats-popular-list" class="stats-list"></div>
+                    <div class="stats-list-legend">
+                      <span>כמות שנמכרה</span>
+                      <span>אחוז מסך ההזמנות</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stats-subgrid">
+                  <div class="stats-mini-card">
+                    <h6 class="stats-mini-title">התפלגות לפי שעת איסוף</h6>
+                    <div id="stats-pickup-chart" class="stats-mini-chart"></div>
+                  </div>
+
+                  <div class="stats-mini-card">
+                    <h6 class="stats-mini-title">ממוצע הזמנות</h6>
+                    <div class="stats-average">
+                      <div>
+                        <span class="stats-average-label">ליום</span>
+                        <span id="stats-avg-day" class="stats-average-value">0</span>
+                      </div>
+                      <div>
+                        <span class="stats-average-label">לשבוע</span>
+                        <span id="stats-avg-week" class="stats-average-value">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stats-section">
+                  <div class="stats-section-header">
+                    <div>
+                      <h5 class="stats-section-title">ניתוח עונתיות</h5>
+                      <p class="stats-section-subtitle">מגמות לפי חודשים לאורך השנה</p>
+                    </div>
+                  </div>
+                  <div id="stats-seasonality-chart" class="stats-seasonality"></div>
+                </div>
+
+                <div class="stats-section">
+                  <div class="stats-section-header">
+                    <h5 class="stats-section-title">הזמנות אחרונות</h5>
+                  </div>
+                  <div class="admin-table-wrapper stats-table-wrapper">
+                    <table class="admin-table stats-table">
+                      <thead>
+                        <tr>
+                          <th>מוצר</th>
+                          <th>מזהה הזמנה</th>
+                          <th>תאריך</th>
+                          <th>שם לקוח</th>
+                          <th>סטטוס</th>
+                          <th>סכום</th>
+                          <th>פעולות</th>
+                        </tr>
+                      </thead>
+                      <tbody id="stats-latest-orders"></tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div class="admin-card">
+
+            <div id="admin-manage-view" class="admin-view hidden">
+              <div class="admin-card">
+                <div class="flex items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-200">
+                  <div>
+                    <h4 class="admin-title mb-1">קבלת הזמנות</h4>
+                    <p class="text-sm text-stone-600">הפעל/כבה את האפשרות לקבל הזמנות חדשות</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="orders-accepting-toggle" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                    <span id="orders-accepting-label" class="ms-3 text-sm font-medium text-stone-700">פתוח</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="admin-card">
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <h4 class="admin-title">ניהול מוצרים</h4>
                 <button id="open-create-modal" class="primary-button sm:w-auto">
@@ -578,6 +721,7 @@
               </button>
               <p id="admin-about-status" class="text-sm mt-2"></p>
             </div>
+          </div>
           </div>
         </section>
 

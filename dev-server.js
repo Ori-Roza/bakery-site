@@ -36,6 +36,7 @@ const initializeMockDb = async () => {
   console.log('✅ Mock database ready with sample data:');
   console.log('   - 2 Categories (חלה, עוגות)');
   console.log('   - 2 Products (חלה קלועה, עוגת שוקולד)');
+  console.log('   - Sample orders for analytics');
   console.log('   - Site metadata');
   
   return mockDbClient;
@@ -87,22 +88,20 @@ const server = http.createServer(async (req, res) => {
       // This uses a simpler approach that works with the existing SupabaseClient.ts
       const mockDbScript = `
         <script type="module">
-          // Import the mock client creator
+          // Create a promise that the app can await for the mock client
           import { createSqliteSupabaseClient } from '/tests/helpers/sqliteSupabaseMock.js';
           
-          // Initialize and inject mock client
-          (async () => {
+          window.__MOCK_MODE__ = true;
+          window.__SUPABASE_CLIENT_PROMISE__ = (async () => {
             try {
               const mockClient = await createSqliteSupabaseClient({ seed: true });
-              
-              // Inject as the Supabase client
               window.__SUPABASE_CLIENT__ = mockClient;
-              window.__MOCK_MODE__ = true;
-              
               console.log('%c🔧 Running in MOCK MODE with SQLite database', 'color: #ff6b6b; font-weight: bold; font-size: 14px');
               console.log('Available tables: categories, products, orders, site_metadata, profiles');
+              return mockClient;
             } catch (error) {
               console.error('Failed to initialize mock database:', error);
+              return null;
             }
           })();
         </script>
@@ -142,6 +141,7 @@ const tryListen = (port) => {
     console.log('📝 Sample Data:');
     console.log('   Categories: חלה, עוגות');
     console.log('   Products: חלה קלועה, עוגת שוקולד\n');
+    console.log('   Orders: 6 דוגמאות להזמנות\n');
     console.log('Press Ctrl+C to stop the server\n');
   });
 

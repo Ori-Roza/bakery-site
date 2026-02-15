@@ -45,10 +45,15 @@ describe("checkout validation", () => {
       time: "10:00",
     });
 
+    // Count existing orders before submission
+    const beforeRow = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
+    const countBefore = beforeRow.count;
+
     await submitCheckout();
 
-    const row = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
-    expect(row.count).toBe(0);
+    const afterRow = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
+    // No new orders should be created due to validation error
+    expect(afterRow.count).toBe(countBefore);
     const errorEl = document.getElementById("checkout-error");
     expect(errorEl.textContent).toContain("שבת");
   });
@@ -76,10 +81,15 @@ describe("checkout validation", () => {
       time: "10:00",
     });
 
+    // Count existing orders before submission
+    const beforeRow = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
+    const countBefore = beforeRow.count;
+
     await submitCheckout();
 
-    const row = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
-    expect(row.count).toBe(0);
+    const afterRow = client.__db.prepare("SELECT COUNT(*) as count FROM orders").get();
+    // No new orders should be created due to validation error
+    expect(afterRow.count).toBe(countBefore);
     const errorEl = document.getElementById("checkout-error");
     expect(errorEl.textContent).toContain("24");
   });
