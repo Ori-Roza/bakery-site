@@ -47,7 +47,7 @@ const SEED = {
 };
 
 const DB_NAME = "bakery-mock-db";
-const DB_VERSION = 3;
+const DB_VERSION = 4; // Incremented to force re-seed after adding pickup_date/pickup_time
 
 // ── IndexedDB Manager ──────────────────────────────────────
 

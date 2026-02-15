@@ -390,7 +390,7 @@
                   יצירת הזמנה חדשה
                 </button>
               </div>
-              <div class="mt-4 mb-4 relative">
+              <div class="mt-4 mb-4 relative max-w-md">
                 <input
                   id="admin-orders-search"
                   class="form-input pr-10"
@@ -432,7 +432,8 @@
                     <tr>
                       <th data-sort="order_number">מזהה הזמנה</th>
                       <th data-sort="name">שם מזמין</th>
-                      <th data-sort="created_at">תאריך</th>
+                      <th data-sort="created_at">תאריך יצירה</th>
+                      <th data-sort="pickup_date">תאריך איסוף</th>
                       <th data-sort="total">סכום</th>
                       <th data-sort="paid">שולם</th>
                       <th data-sort="notes">הערות מנהל</th>
@@ -596,7 +597,8 @@
                   <option value="">בחר שדה...</option>
                   <option value="order_number">מזהה הזמנה</option>
                   <option value="customer_name">שם לקוח</option>
-                  <option value="created_at">תאריך</option>
+                  <option value="created_at">תאריך יצירה</option>
+                  <option value="pickup_date">תאריך איסוף</option>
                   <option value="total">סכום הזמנה</option>
                   <option value="paid">שולם</option>
                   <option value="deleted">נמחק</option>
@@ -802,10 +804,6 @@
           <div>
             <label class="form-label" for="order-name">שם</label>
             <input id="order-name" class="form-input" />
-          </div>
-          <div>
-            <label class="form-label" for="order-date">תאריך יצירה</label>
-            <input id="order-date" type="datetime-local" class="form-input" />
           </div>
           <div>
             <label class="form-label" for="order-pickup-date">תאריך איסוף</label>

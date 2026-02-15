@@ -664,6 +664,9 @@ const renderAdmin = () => {
     } else if (orderKey === "created_at") {
       left = new Date(a.created_at).getTime();
       right = new Date(b.created_at).getTime();
+    } else if (orderKey === "pickup_date") {
+      left = a.pickup_date ? new Date(a.pickup_date).getTime() : 0;
+      right = b.pickup_date ? new Date(b.pickup_date).getTime() : 0;
     } else if (orderKey === "order_number") {
       left = Number(a.order_number) || 0;
       right = Number(b.order_number) || 0;
@@ -687,7 +690,7 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='8' class='text-sm text-stone-500'>לא קיימת תוצאות להצגה.</td>";
+      "<td colspan='9' class='text-sm text-stone-500'>לא קיימת תוצאות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
@@ -703,6 +706,7 @@ const renderAdmin = () => {
       <td>${order.order_number ?? ""}</td>
       <td>${order.customer?.name || 'Unknown'}</td>
       <td>${new Date(order.created_at).toLocaleString("he-IL", { hour12: false })}</td>
+      <td>${order.pickup_date ? new Date(order.pickup_date).toLocaleDateString("he-IL", { year: "numeric", month: "2-digit", day: "2-digit" }) + " " + (order.pickup_time || "") : "-"}</td>
       <td class="text-amber-900 font-semibold">${formatCurrency(
         order.total ?? 0
       )}</td>
@@ -1148,9 +1152,7 @@ const handleCreateOrder = async () => {
   if (!ensureAdmin()) return;
 
   const name = orderName?.value.trim() || "";
-  const createdAt = orderDate?.value
-    ? new Date(orderDate.value).toISOString()
-    : new Date().toISOString();
+  const createdAt = new Date().toISOString(); // Always use current time
   const pickupDate = orderPickupDate?.value || "";
   const pickupTime = orderPickupTime?.value || "";
   let total = Number(orderTotal?.value) || 0;
