@@ -176,3 +176,34 @@ export function exportOrdersAsXLSX(orders: Order[]): void {
   const filename = `הזמנות_${getTimestamp()}.xlsx`;
   downloadFile(blob, filename);
 }
+
+/**
+ * Export admin stats container as PDF
+ */
+export async function exportStatsAsPDF(element: HTMLElement | null): Promise<void> {
+  if (!element) {
+    alert('לא נמצא אזור הסטטיסטיקות לייצוא.');
+    return;
+  }
+
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf = html2pdfModule.default;
+
+  await html2pdf()
+    .set({
+      margin: [10, 10, 10, 10],
+      filename: `סטטיסטיקות_${getTimestamp()}.pdf`,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff',
+        ignoreElements: (currentElement: Element) => currentElement.id === 'stats-export-pdf',
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    } as any)
+    .from(element)
+    .save();
+}
