@@ -82,6 +82,20 @@ const adminNewOrderButton = document.getElementById("admin-new-order") as HTMLEl
 const adminProductsTable = document.getElementById("admin-products-table") as HTMLElement | null;
 const adminOrdersTable = document.getElementById("admin-orders-table") as HTMLElement | null;
 const adminOrdersSearchInput = document.getElementById("admin-orders-search") as HTMLInputElement | null;
+const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") as HTMLElement | null;
+const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
+const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
+const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const adminOrdersFilterModal = document.getElementById("admin-orders-filter-modal") as HTMLElement | null;
+const adminFilterModalClose = document.getElementById("admin-filter-modal-close") as HTMLElement | null;
+const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
+const adminFilterOperator = document.getElementById("admin-filter-operator") as HTMLSelectElement | null;
+const adminFilterValue = document.getElementById("admin-filter-value") as HTMLInputElement | null;
+const adminFilterValueSelect = document.getElementById("admin-filter-value-select") as HTMLSelectElement | null;
+const adminFilterValueFrom = document.getElementById("admin-filter-value-from") as HTMLInputElement | null;
+const adminFilterValueTo = document.getElementById("admin-filter-value-to") as HTMLInputElement | null;
+const adminFilterApply = document.getElementById("admin-filter-apply") as HTMLElement | null;
+const adminFilterCancel = document.getElementById("admin-filter-cancel") as HTMLElement | null;
 const orderDetailsModal = document.getElementById("order-details-modal") as HTMLElement | null;
 const orderDetailsClose = document.getElementById("order-details-close") as HTMLElement | null;
 const orderDetailsContent = document.getElementById("order-details-content") as HTMLElement | null;
@@ -2525,6 +2539,115 @@ const closeNotesPopover = (shouldSave = false) => {
   activeNotesInput = null;
 };
 
+const resetFilterModal = () => {
+  if (adminFilterField) adminFilterField.value = "";
+  if (adminFilterOperator) {
+    adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
+    adminFilterOperator.disabled = true;
+  }
+  if (adminFilterValue) {
+    adminFilterValue.value = "";
+    adminFilterValue.type = "text";
+    adminFilterValue.classList.remove("hidden");
+  }
+  if (adminFilterValueSelect) {
+    adminFilterValueSelect.value = "";
+    adminFilterValueSelect.classList.add("hidden");
+  }
+  if (adminFilterValueFrom) {
+    adminFilterValueFrom.value = "";
+    adminFilterValueFrom.type = "text";
+    adminFilterValueFrom.classList.add("hidden");
+  }
+  if (adminFilterValueTo) {
+    adminFilterValueTo.value = "";
+    adminFilterValueTo.type = "text";
+    adminFilterValueTo.classList.add("hidden");
+  }
+};
+
+const updateFilterOperators = () => {
+  if (!adminFilterField || !adminFilterOperator) return;
+  const fieldName = adminFilterField.value;
+  const operators = OrderFilterService.getOperatorsForField(fieldName);
+
+  adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
+  operators.forEach((op) => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    adminFilterOperator.appendChild(option);
+  });
+
+  adminFilterOperator.disabled = operators.length === 0;
+  adminFilterOperator.value = "";
+  updateFilterValueInputs();
+};
+
+const updateFilterValueInputs = () => {
+  if (!adminFilterField || !adminFilterOperator) return;
+  const fieldName = adminFilterField.value;
+  const operator = adminFilterOperator.value;
+  const fieldDef = OrderFilterService.getFieldDef(fieldName);
+
+  if (!adminFilterValue || !adminFilterValueFrom || !adminFilterValueTo || !adminFilterValueSelect) {
+    return;
+  }
+
+  // Reset visibility
+  adminFilterValue.classList.add("hidden");
+  adminFilterValueSelect.classList.add("hidden");
+  adminFilterValueFrom.classList.add("hidden");
+  adminFilterValueTo.classList.add("hidden");
+
+  if (!fieldDef) {
+    return;
+  }
+
+  if (fieldDef.type === 'boolean') {
+    adminFilterValueSelect.classList.remove("hidden");
+    return;
+  }
+
+  if (operator === 'between') {
+    adminFilterValueFrom.classList.remove("hidden");
+    adminFilterValueTo.classList.remove("hidden");
+
+    if (fieldDef.type === 'number') {
+      adminFilterValueFrom.type = 'number';
+      adminFilterValueTo.type = 'number';
+    } else if (fieldDef.type === 'date') {
+      adminFilterValueFrom.type = 'date';
+      adminFilterValueTo.type = 'date';
+    } else {
+      adminFilterValueFrom.type = 'text';
+      adminFilterValueTo.type = 'text';
+    }
+    return;
+  }
+
+  adminFilterValue.classList.remove("hidden");
+  if (fieldDef.type === 'number') {
+    adminFilterValue.type = 'number';
+  } else if (fieldDef.type === 'date') {
+    adminFilterValue.type = 'date';
+  } else {
+    adminFilterValue.type = 'text';
+  }
+};
+
+const getFilteredOrdersForExport = () => {
+  const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
+  let filteredOrders = state.orders.filter((order) => {
+    if (!orderQuery) return true;
+    const name = order.customer?.name?.toLowerCase() || "";
+    const orderNumber = String(order.order_number ?? "").toLowerCase();
+    return name.includes(orderQuery) || orderNumber.includes(orderQuery);
+  });
+  filteredOrders = OrderFilterService.applyFilters(filteredOrders, state.activeOrderFilters);
+  return filteredOrders;
+};
+
 const setupListeners = () => {
   // Logo click to go back to home
   if (siteLogoEl) {
@@ -2761,240 +2884,62 @@ const setupListeners = () => {
 
   adminSearchInput?.addEventListener("input", renderAdmin);
   adminOrdersSearchInput?.addEventListener("input", renderAdmin);
-
-  // Filter modal and export button listeners
-  const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn");
-  const adminFilterModalClose = document.getElementById("admin-filter-modal-close");
-  const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
-  const adminFilterOperator = document.getElementById("admin-filter-operator") as HTMLSelectElement | null;
-  const adminFilterValue = document.getElementById("admin-filter-value") as HTMLInputElement | null;
-  const adminFilterValueFrom = document.getElementById("admin-filter-value-from") as HTMLInputElement | null;
-  const adminFilterValueTo = document.getElementById("admin-filter-value-to") as HTMLInputElement | null;
-  const adminFilterCancel = document.getElementById("admin-filter-cancel");
-  const adminFilterApply = document.getElementById("admin-filter-apply");
-  const adminOrderFilterModal = document.getElementById("admin-orders-filter-modal");
-  const adminFilterClearBtn = document.getElementById("admin-orders-clear-filters-btn");
-  const adminExportCsvBtn = document.getElementById("admin-orders-export-csv");
-  const adminExportXlsxBtn = document.getElementById("admin-orders-export-xlsx");
-  const adminActiveFiltersContainer = document.getElementById("admin-orders-active-filters");
-
-  // Toggle filter modal
   adminOrdersFilterBtn?.addEventListener("click", () => {
-    state.isFilterModalOpen = !state.isFilterModalOpen;
-    if (state.isFilterModalOpen) {
-      adminOrderFilterModal?.classList.remove("hidden");
-      adminFilterField?.focus();
-    } else {
-      adminOrderFilterModal?.classList.add("hidden");
-    }
+    resetFilterModal();
+    adminOrdersFilterModal?.classList.remove("hidden");
   });
-
-  // Close filter modal
   adminFilterModalClose?.addEventListener("click", () => {
-    state.isFilterModalOpen = false;
-    adminOrderFilterModal?.classList.add("hidden");
+    adminOrdersFilterModal?.classList.add("hidden");
   });
-
-  // Field selector change - populate operators
-  adminFilterField?.addEventListener("change", () => {
-    const selectedField = adminFilterField.value;
-    if (!selectedField) {
-      adminFilterOperator?.setAttribute("disabled", "disabled");
-      return;
-    }
-
-    const operators = OrderFilterService.getOperatorsForField(selectedField);
-    if (adminFilterOperator) {
-      adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
-      operators.forEach((op) => {
-        const option = document.createElement("option");
-        option.value = op.value;
-        option.textContent = op.label;
-        adminFilterOperator.appendChild(option);
-      });
-      adminFilterOperator.removeAttribute("disabled");
-    }
-
-    // Reset value inputs
-    if (adminFilterValue) adminFilterValue.value = "";
-    if (adminFilterValueFrom) adminFilterValueFrom.value = "";
-    if (adminFilterValueTo) adminFilterValueTo.value = "";
+  adminFilterCancel?.addEventListener("click", () => {
+    adminOrdersFilterModal?.classList.add("hidden");
   });
-
-  // Operator selector change - show appropriate input fields
-  adminFilterOperator?.addEventListener("change", () => {
-    const fieldName = adminFilterField?.value;
-    const operator = adminFilterOperator.value;
-    const fieldDef = OrderFilterService.getFieldDef(fieldName || "");
-
-    // Hide all inputs first
-    if (adminFilterValue) adminFilterValue.classList.remove("hidden");
-    if (adminFilterValueFrom) adminFilterValueFrom.classList.add("hidden");
-    if (adminFilterValueTo) adminFilterValueTo.classList.add("hidden");
-
-    if (!fieldDef) return;
-
-    // Update input type based on field type and operator
-    if (fieldDef.type === "number") {
-      if (adminFilterValue) {
-        adminFilterValue.type = "number";
-        adminFilterValue.placeholder = "הזן מספר";
-      }
-      if (operator === "between") {
-        if (adminFilterValue) adminFilterValue.classList.add("hidden");
-        if (adminFilterValueFrom) {
-          adminFilterValueFrom.classList.remove("hidden");
-          adminFilterValueFrom.type = "number";
-          adminFilterValueFrom.placeholder = "מ...";
-        }
-        if (adminFilterValueTo) {
-          adminFilterValueTo.classList.remove("hidden");
-          adminFilterValueTo.type = "number";
-          adminFilterValueTo.placeholder = "עד...";
-        }
-      }
-    } else if (fieldDef.type === "date") {
-      if (adminFilterValue) {
-        adminFilterValue.type = "date";
-      }
-      if (operator === "between" || operator === "betweenDates") {
-        if (adminFilterValue) adminFilterValue.classList.add("hidden");
-        if (adminFilterValueFrom) {
-          adminFilterValueFrom.classList.remove("hidden");
-          adminFilterValueFrom.type = "date";
-          adminFilterValueFrom.placeholder = "מתאריך...";
-        }
-        if (adminFilterValueTo) {
-          adminFilterValueTo.classList.remove("hidden");
-          adminFilterValueTo.type = "date";
-          adminFilterValueTo.placeholder = "עד תאריך...";
-        }
-      } else {
-        if (adminFilterValue) adminFilterValue.type = "date";
-      }
-    } else if (fieldDef.type === "boolean") {
-      if (adminFilterValue) {
-        adminFilterValue.type = "text";
-        // Replace with dropdown for boolean
-        const div = adminFilterValue.parentElement;
-        if (div && !div.querySelector("select.filter-boolean-select")) {
-          const select = document.createElement("select");
-          select.className = "form-input filter-boolean-select";
-          select.innerHTML = '<option value="">בחר...</option><option value="yes">כן</option><option value="no">לא</option>';
-          adminFilterValue.replaceWith(select);
-          // Re-assign the reference
-          (window as any).adminFilterBooleanSelect = select;
-        }
-      }
-    } else {
-      if (adminFilterValue) {
-        adminFilterValue.type = "text";
-      }
-    }
-  });
-
-  // Apply filter
+  adminFilterField?.addEventListener("change", updateFilterOperators);
+  adminFilterOperator?.addEventListener("change", updateFilterValueInputs);
   adminFilterApply?.addEventListener("click", () => {
-    const fieldName = adminFilterField?.value;
-    const operator = adminFilterOperator?.value;
-    let value: any = null;
+    if (!adminFilterField || !adminFilterOperator) return;
+    const field = adminFilterField.value;
+    const operator = adminFilterOperator.value;
 
-    if (!fieldName || !operator) {
+    if (!field || !operator) {
       alert("יש לבחור שדה ותנאי.");
       return;
     }
 
-    const fieldDef = OrderFilterService.getFieldDef(fieldName);
+    const fieldDef = OrderFilterService.getFieldDef(field);
+    let value: any = null;
 
-    // Get filter value based on field type
-    if (fieldDef?.type === "number" && operator === "between") {
-      const fromVal = adminFilterValueFrom?.value;
-      const toVal = adminFilterValueTo?.value;
-      if (!fromVal || !toVal) {
-        alert("יש להזין ערכים מ-עד.");
-        return;
-      }
-      value = [Number(fromVal), Number(toVal)];
-    } else if (fieldDef?.type === "date" && (operator === "between" || operator === "betweenDates")) {
-      const fromVal = adminFilterValueFrom?.value;
-      const toVal = adminFilterValueTo?.value;
-      if (!fromVal || !toVal) {
-        alert("יש לבחור תאריכים מ-עד.");
-        return;
-      }
-      value = [fromVal, toVal];
-    } else if (fieldDef?.type === "boolean") {
-      const selectEl = document.querySelector(".filter-boolean-select") as HTMLSelectElement | null;
-      value = selectEl?.value || adminFilterValue?.value;
-      if (!value || value === "") {
-        alert("יש לבחור כן או לא.");
-        return;
-      }
+    if (fieldDef?.type === 'boolean') {
+      value = adminFilterValueSelect?.value || "";
+    } else if (operator === 'between') {
+      const fromValue = adminFilterValueFrom?.value || "";
+      const toValue = adminFilterValueTo?.value || "";
+      value = [fromValue, toValue];
     } else {
-      value = adminFilterValue?.value;
-      if (!value || value.toString().trim() === "") {
-        alert("יש להזין ערך.");
-        return;
-      }
+      value = adminFilterValue?.value || "";
     }
 
-    // Validate filter
-    const newFilter: OrderFilter = { field: fieldName, operator, value };
+    const newFilter: OrderFilter = { field, operator, value };
     const validation = OrderFilterService.validateFilter(newFilter);
     if (!validation.valid) {
-      alert(validation.error || "סינון לא תקין");
+      alert("יש למלא ערך תקין לסינון.");
       return;
     }
 
-    // Add filter to state
     state.activeOrderFilters.push(newFilter);
-
-    // Reset modal
-    if (adminFilterField) adminFilterField.value = "";
-    if (adminFilterOperator) adminFilterOperator.value = "";
-    if (adminFilterValue) adminFilterValue.value = "";
-    if (adminFilterValueFrom) adminFilterValueFrom.value = "";
-    if (adminFilterValueTo) adminFilterValueTo.value = "";
-
-    // Close modal
-    state.isFilterModalOpen = false;
-    adminOrderFilterModal?.classList.add("hidden");
-
-    // Re-render
+    adminOrdersFilterModal?.classList.add("hidden");
     renderAdmin();
   });
-
-  // Cancel filter modal
-  adminFilterCancel?.addEventListener("click", () => {
-    state.isFilterModalOpen = false;
-    adminOrderFilterModal?.classList.add("hidden");
-  });
-
-  // Remove individual filter
-  adminActiveFiltersContainer?.addEventListener("click", (event) => {
-    const removeBtn = (event.target as HTMLElement).closest("button[data-filter-index]");
-    if (removeBtn) {
-      const index = parseInt((removeBtn as HTMLElement).dataset.filterIndex || "0", 10);
-      state.activeOrderFilters.splice(index, 1);
-      renderAdmin();
-    }
-  });
-
-  // Clear all filters
-  adminFilterClearBtn?.addEventListener("click", () => {
+  adminOrdersClearFiltersBtn?.addEventListener("click", () => {
     state.activeOrderFilters = [];
     renderAdmin();
   });
-
-  // Export to CSV
-  adminExportCsvBtn?.addEventListener("click", () => {
-    const filteredOrders = OrderFilterService.applyFilters(state.orders, state.activeOrderFilters);
+  adminOrdersExportCsv?.addEventListener("click", () => {
+    const filteredOrders = getFilteredOrdersForExport();
     OrderExportService.exportOrdersAsCSV(filteredOrders);
   });
-
-  // Export to XLSX
-  adminExportXlsxBtn?.addEventListener("click", () => {
-    const filteredOrders = OrderFilterService.applyFilters(state.orders, state.activeOrderFilters);
+  adminOrdersExportXlsx?.addEventListener("click", () => {
+    const filteredOrders = getFilteredOrdersForExport();
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
   });
 

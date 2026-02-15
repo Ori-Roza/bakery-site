@@ -6,6 +6,22 @@
 import type { Order } from '../types/models';
 
 /**
+ * Format date for export (he-IL locale)
+ */
+function formatDateForExport(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('he-IL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
  * Escape CSV value (handle quotes and commas)
  */
 function escapeCSVValue(value: any): string {

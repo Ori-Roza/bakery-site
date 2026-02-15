@@ -190,6 +190,13 @@ function matchesOperator(
     case 'between': {
       const values = Array.isArray(filterValue) ? filterValue : [filterValue];
       if (values.length < 2) return false;
+
+      if (fieldType === 'date') {
+        const [start, end] = [new Date(values[0]), new Date(values[1])];
+        const dateValue = new Date(fieldValue);
+        return dateValue >= start && dateValue <= end;
+      }
+
       const [min, max] = [Number(values[0]), Number(values[1])];
       return Number(fieldValue) >= min && Number(fieldValue) <= max;
     }
@@ -292,6 +299,19 @@ export function validateFilter(filter: OrderFilter): { valid: boolean; error?: s
 
   if ((operator === 'between' || operator === 'betweenDates') && !Array.isArray(value)) {
     return { valid: false, error: 'Between operator requires two values' };
+  }
+
+  if (fieldDef.type === 'boolean') {
+    if (value === '' || value === null || value === undefined) {
+      return { valid: false, error: 'Boolean value is required' };
+    }
+  }
+
+  if (operator === 'between' || operator === 'betweenDates') {
+    const values = Array.isArray(value) ? value : [];
+    if (!values[0] || !values[1]) {
+      return { valid: false, error: 'Both range values are required' };
+    }
   }
 
   return { valid: true };
