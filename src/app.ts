@@ -831,6 +831,16 @@ const renderBarSeries = (
     .join("");
 };
 
+const getStatsItemTitle = (item: any): string => {
+  if (!item) return "-";
+  if (item.title) return String(item.title);
+  if (item.products) {
+    const related = Array.isArray(item.products) ? item.products[0] : item.products;
+    if (related?.title) return String(related.title);
+  }
+  return "-";
+};
+
 const renderStatistics = () => {
   if (!statsOrdersValue || !statsTrendChart) return;
 
@@ -965,13 +975,8 @@ const renderStatistics = () => {
         .map((order) => {
           const relatedItems = Array.isArray(order.order_items) ? order.order_items : [];
           const items = relatedItems.length ? relatedItems : order.items || [];
-          const firstItem = items[0];
-          const relatedProduct = firstItem
-            ? Array.isArray(firstItem.products)
-              ? firstItem.products[0]
-              : firstItem.products
-            : null;
-          const title = relatedProduct?.title || firstItem?.title || "-";
+          const firstItem = items[0] as any;
+          const title = getStatsItemTitle(firstItem);
           const extraCount = items.length > 1 ? ` ועוד ${items.length - 1}` : "";
           const total = getOrderTotal(order);
           const status = order.deleted
