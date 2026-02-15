@@ -5,7 +5,6 @@ import {
   computeAverageOrders,
   computeKpis,
   computeMonthlySeasonality,
-  computeOrderHourDistribution,
   computePickupHourDistribution,
   computePopularProducts,
   filterOrdersByRange,
@@ -120,7 +119,6 @@ const statsTrendChart = document.getElementById("stats-trend-chart") as HTMLElem
 const statsTrendLegend = document.getElementById("stats-trend-legend") as HTMLElement | null;
 const statsPopularList = document.getElementById("stats-popular-list") as HTMLElement | null;
 const statsPickupChart = document.getElementById("stats-pickup-chart") as HTMLElement | null;
-const statsOrderHourChart = document.getElementById("stats-order-hour-chart") as HTMLElement | null;
 const statsAvgDay = document.getElementById("stats-avg-day") as HTMLElement | null;
 const statsAvgWeek = document.getElementById("stats-avg-week") as HTMLElement | null;
 const statsSeasonalityChart = document.getElementById("stats-seasonality-chart") as HTMLElement | null;
@@ -857,12 +855,12 @@ const renderBarSeries = (
   const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
   container.innerHTML = entries
     .map((entry, index) => {
-      const height = Math.max(6, (entry.value / maxValue) * 160);
+      const pct = Math.max(4, (entry.value / maxValue) * 100);
       const label = index % labelEvery === 0 ? entry.label : "";
       const title = `${entry.label} · ${entry.value}`;
       return `
         <div class="stats-bar-group" title="${title}">
-          <div class="stats-bar" style="height: ${height}px"></div>
+          <div class="stats-bar" style="height: ${pct}%"></div>
           <div class="stats-bar-label">${label}</div>
         </div>
       `;
@@ -999,15 +997,6 @@ const renderStatistics = () => {
   renderBarSeries(
     statsPickupChart,
     computePickupHourDistribution(rangeOrders).map((entry) => ({
-      label: entry.label,
-      value: entry.count,
-    })),
-    1
-  );
-
-  renderBarSeries(
-    statsOrderHourChart,
-    computeOrderHourDistribution(rangeOrders).map((entry) => ({
       label: entry.label,
       value: entry.count,
     })),
@@ -3999,7 +3988,9 @@ const init = async () => {
   if (isMockMode() && !state.session) {
     state.session = { user: { id: 'mock-admin', email: 'admin@bakery.local' } } as any;
     state.role = 'admin';
+    adminGreetingEl && (adminGreetingEl.textContent = `Hello admin@bakery.local`);
     setAdminUI(true);
+    renderAdmin();
     setAdminView('stats');
     console.log('[init] Auto-login for mock mode admin access');
   }

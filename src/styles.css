@@ -959,22 +959,25 @@ select.form-input {
 .stats-chart {
   height: 220px;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 0.5rem;
   padding: 0.75rem;
   background: white;
   border-radius: 0.85rem;
   border: 1px dashed #f1e4d6;
   overflow-x: auto;
+  overflow-y: hidden;
   direction: ltr;
 }
 
 .stats-bar-group {
-  display: grid;
-  gap: 0.35rem;
-  align-items: end;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
   min-width: 26px;
+  height: 100%;
 }
 
 .stats-bar {
@@ -1056,13 +1059,14 @@ select.form-input {
 .stats-mini-chart {
   height: 140px;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 0.45rem;
   padding: 0.5rem;
   background: white;
   border-radius: 0.85rem;
   border: 1px dashed #f1e4d6;
   overflow-x: auto;
+  overflow-y: hidden;
   direction: ltr;
 }
 
@@ -1086,13 +1090,14 @@ select.form-input {
 .stats-seasonality {
   height: 160px;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 0.45rem;
   padding: 0.5rem;
   background: white;
   border-radius: 0.85rem;
   border: 1px dashed #f1e4d6;
   overflow-x: auto;
+  overflow-y: hidden;
   direction: ltr;
 }
 

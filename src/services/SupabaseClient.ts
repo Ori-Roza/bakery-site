@@ -31,6 +31,19 @@ export const getInjectedSupabaseClient = (): SupabaseClient | null => {
  * First checks for injected client (tests), then creates from config
  */
 export const createSupabaseClient = async (): Promise<SupabaseClient | null> => {
+  // Wait for mock client if dev-server is preparing one
+  if (typeof window !== "undefined" && (window as any).__SUPABASE_CLIENT_PROMISE__) {
+    try {
+      const mockClient = await (window as any).__SUPABASE_CLIENT_PROMISE__;
+      if (mockClient) {
+        (window as any).__SUPABASE_CLIENT__ = mockClient;
+        return mockClient;
+      }
+    } catch (e) {
+      console.error('[SupabaseClient] Mock client promise failed:', e);
+    }
+  }
+
   const injected = getInjectedSupabaseClient();
   if (injected) return injected;
 
