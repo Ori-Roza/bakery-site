@@ -197,6 +197,19 @@ class SQLiteQuery {
     try {
       if (this.operation === "insert") {
         const rows = this.payload.map(serializeRow);
+        
+        // Auto-generate order_number for orders table (simulate database trigger)
+        if (this.table === "orders") {
+          rows.forEach((row) => {
+            if (row.order_number === null || row.order_number === undefined) {
+              // Get the next order number by finding max + 1
+              const maxStmt = this.db.prepare("SELECT COALESCE(MAX(order_number), 0) as max_num FROM orders");
+              const result = maxStmt.get();
+              row.order_number = (result.max_num || 0) + 1;
+            }
+          });
+        }
+        
         const keys = Object.keys(rows[0] || {});
         const placeholders = keys.map(() => "?").join(", ");
         rows.forEach((row) => {
