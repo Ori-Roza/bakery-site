@@ -13,11 +13,13 @@ import {
   CUSTOMER_PHONE_REQUIRED,
   DEFAULT_ABOUT
 } from './config/constants';
-import type { AppState, OrderMessageParams } from './types/models';
+import type { AppState, OrderMessageParams, OrderFilter } from './types/models';
 import { store, getState } from './store/state';
 import * as actions from './store/actions';
 import { ProductMapper } from './models/ProductMapper';
 import { CategoryMapper } from './models/CategoryMapper';
+import * as OrderFilterService from './services/OrderFilterService';
+import * as OrderExportService from './services/OrderExportService';
 import { createSupabaseClient } from './services/SupabaseClient';
 import { StorageService } from './services/StorageService';
 import { ProductService } from './services/ProductService';
@@ -28,7 +30,7 @@ import { OrderBuilder } from './business/OrderBuilder';
 import { CategoryUI } from './ui/CategoryUI';
 // import { CartUI } from './ui/CartUI'; // Unused - for future use
 // import { ProductUI } from './ui/ProductUI'; // Unused - for future use
-// import { AdminUI } from './ui/AdminUI'; // Unused - for future use
+import { AdminUI } from './ui/AdminUI';
 // import { ModalUI } from './ui/ModalUI'; // Unused - for future use
 // import { CartHandlers } from './handlers/CartHandlers'; // Unused - for future use
 // import { CheckoutHandlers } from './handlers/CheckoutHandlers'; // Unused - for future use
@@ -80,6 +82,20 @@ const adminNewOrderButton = document.getElementById("admin-new-order") as HTMLEl
 const adminProductsTable = document.getElementById("admin-products-table") as HTMLElement | null;
 const adminOrdersTable = document.getElementById("admin-orders-table") as HTMLElement | null;
 const adminOrdersSearchInput = document.getElementById("admin-orders-search") as HTMLInputElement | null;
+const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") as HTMLElement | null;
+const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
+const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
+const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const adminOrdersFilterModal = document.getElementById("admin-orders-filter-modal") as HTMLElement | null;
+const adminFilterModalClose = document.getElementById("admin-filter-modal-close") as HTMLElement | null;
+const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
+const adminFilterOperator = document.getElementById("admin-filter-operator") as HTMLSelectElement | null;
+const adminFilterValue = document.getElementById("admin-filter-value") as HTMLInputElement | null;
+const adminFilterValueSelect = document.getElementById("admin-filter-value-select") as HTMLSelectElement | null;
+const adminFilterValueFrom = document.getElementById("admin-filter-value-from") as HTMLInputElement | null;
+const adminFilterValueTo = document.getElementById("admin-filter-value-to") as HTMLInputElement | null;
+const adminFilterApply = document.getElementById("admin-filter-apply") as HTMLElement | null;
+const adminFilterCancel = document.getElementById("admin-filter-cancel") as HTMLElement | null;
 const orderDetailsModal = document.getElementById("order-details-modal") as HTMLElement | null;
 const orderDetailsClose = document.getElementById("order-details-close") as HTMLElement | null;
 const orderDetailsContent = document.getElementById("order-details-content") as HTMLElement | null;
@@ -588,12 +604,39 @@ const renderAdmin = () => {
   
   adminOrdersEl.innerHTML = "";
   const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
-  const filteredOrders = state.orders.filter((order) => {
+  
+  // First apply search filter
+  let filteredOrders = state.orders.filter((order) => {
     if (!orderQuery) return true;
     const name = order.customer?.name?.toLowerCase() || "";
     const orderNumber = String(order.order_number ?? "").toLowerCase();
     return name.includes(orderQuery) || orderNumber.includes(orderQuery);
   });
+
+  // Then apply advanced filters
+  filteredOrders = OrderFilterService.applyFilters(filteredOrders, state.activeOrderFilters);
+
+  // Render active filter chips
+  const adminActiveFiltersEl = document.getElementById("admin-orders-active-filters");
+  const adminFilterClearBtn = document.getElementById("admin-orders-clear-filters-btn");
+  if (adminActiveFiltersEl) {
+    AdminUI.renderActiveFilterChips(
+      state.activeOrderFilters,
+      adminActiveFiltersEl,
+      (filter) => OrderFilterService.formatFilterForDisplay(filter),
+      (index) => {
+        state.activeOrderFilters.splice(index, 1);
+        renderAdmin();
+      }
+    );
+    
+    // Toggle clear button visibility
+    if (state.activeOrderFilters.length > 0) {
+      adminFilterClearBtn?.classList.remove("hidden");
+    } else {
+      adminFilterClearBtn?.classList.add("hidden");
+    }
+  }
 
   const { key: orderKey, dir: orderDir } = state.sortOrders;
   filteredOrders.sort((a, b) => {
@@ -634,7 +677,7 @@ const renderAdmin = () => {
   if (!filteredOrders.length) {
     const row = document.createElement("tr");
     row.innerHTML =
-      "<td colspan='8' class='text-sm text-stone-500'>עדיין אין הזמנות להצגה.</td>";
+      "<td colspan='8' class='text-sm text-stone-500'>לא קיימת תוצאות להצגה.</td>";
     adminOrdersEl.appendChild(row);
     return;
   }
@@ -2496,6 +2539,115 @@ const closeNotesPopover = (shouldSave = false) => {
   activeNotesInput = null;
 };
 
+const resetFilterModal = () => {
+  if (adminFilterField) adminFilterField.value = "";
+  if (adminFilterOperator) {
+    adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
+    adminFilterOperator.disabled = true;
+  }
+  if (adminFilterValue) {
+    adminFilterValue.value = "";
+    adminFilterValue.type = "text";
+    adminFilterValue.classList.remove("hidden");
+  }
+  if (adminFilterValueSelect) {
+    adminFilterValueSelect.value = "";
+    adminFilterValueSelect.classList.add("hidden");
+  }
+  if (adminFilterValueFrom) {
+    adminFilterValueFrom.value = "";
+    adminFilterValueFrom.type = "text";
+    adminFilterValueFrom.classList.add("hidden");
+  }
+  if (adminFilterValueTo) {
+    adminFilterValueTo.value = "";
+    adminFilterValueTo.type = "text";
+    adminFilterValueTo.classList.add("hidden");
+  }
+};
+
+const updateFilterOperators = () => {
+  if (!adminFilterField || !adminFilterOperator) return;
+  const fieldName = adminFilterField.value;
+  const operators = OrderFilterService.getOperatorsForField(fieldName);
+
+  adminFilterOperator.innerHTML = '<option value="">בחר תנאי...</option>';
+  operators.forEach((op) => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    adminFilterOperator.appendChild(option);
+  });
+
+  adminFilterOperator.disabled = operators.length === 0;
+  adminFilterOperator.value = "";
+  updateFilterValueInputs();
+};
+
+const updateFilterValueInputs = () => {
+  if (!adminFilterField || !adminFilterOperator) return;
+  const fieldName = adminFilterField.value;
+  const operator = adminFilterOperator.value;
+  const fieldDef = OrderFilterService.getFieldDef(fieldName);
+
+  if (!adminFilterValue || !adminFilterValueFrom || !adminFilterValueTo || !adminFilterValueSelect) {
+    return;
+  }
+
+  // Reset visibility
+  adminFilterValue.classList.add("hidden");
+  adminFilterValueSelect.classList.add("hidden");
+  adminFilterValueFrom.classList.add("hidden");
+  adminFilterValueTo.classList.add("hidden");
+
+  if (!fieldDef) {
+    return;
+  }
+
+  if (fieldDef.type === 'boolean') {
+    adminFilterValueSelect.classList.remove("hidden");
+    return;
+  }
+
+  if (operator === 'between') {
+    adminFilterValueFrom.classList.remove("hidden");
+    adminFilterValueTo.classList.remove("hidden");
+
+    if (fieldDef.type === 'number') {
+      adminFilterValueFrom.type = 'number';
+      adminFilterValueTo.type = 'number';
+    } else if (fieldDef.type === 'date') {
+      adminFilterValueFrom.type = 'date';
+      adminFilterValueTo.type = 'date';
+    } else {
+      adminFilterValueFrom.type = 'text';
+      adminFilterValueTo.type = 'text';
+    }
+    return;
+  }
+
+  adminFilterValue.classList.remove("hidden");
+  if (fieldDef.type === 'number') {
+    adminFilterValue.type = 'number';
+  } else if (fieldDef.type === 'date') {
+    adminFilterValue.type = 'date';
+  } else {
+    adminFilterValue.type = 'text';
+  }
+};
+
+const getFilteredOrdersForExport = () => {
+  const orderQuery = adminOrdersSearchInput?.value?.trim().toLowerCase() || "";
+  let filteredOrders = state.orders.filter((order) => {
+    if (!orderQuery) return true;
+    const name = order.customer?.name?.toLowerCase() || "";
+    const orderNumber = String(order.order_number ?? "").toLowerCase();
+    return name.includes(orderQuery) || orderNumber.includes(orderQuery);
+  });
+  filteredOrders = OrderFilterService.applyFilters(filteredOrders, state.activeOrderFilters);
+  return filteredOrders;
+};
+
 const setupListeners = () => {
   // Logo click to go back to home
   if (siteLogoEl) {
@@ -2732,7 +2884,67 @@ const setupListeners = () => {
 
   adminSearchInput?.addEventListener("input", renderAdmin);
   adminOrdersSearchInput?.addEventListener("input", renderAdmin);
+  adminOrdersFilterBtn?.addEventListener("click", () => {
+    resetFilterModal();
+    adminOrdersFilterModal?.classList.remove("hidden");
+  });
+  adminFilterModalClose?.addEventListener("click", () => {
+    adminOrdersFilterModal?.classList.add("hidden");
+  });
+  adminFilterCancel?.addEventListener("click", () => {
+    adminOrdersFilterModal?.classList.add("hidden");
+  });
+  adminFilterField?.addEventListener("change", updateFilterOperators);
+  adminFilterOperator?.addEventListener("change", updateFilterValueInputs);
+  adminFilterApply?.addEventListener("click", () => {
+    if (!adminFilterField || !adminFilterOperator) return;
+    const field = adminFilterField.value;
+    const operator = adminFilterOperator.value;
+
+    if (!field || !operator) {
+      alert("יש לבחור שדה ותנאי.");
+      return;
+    }
+
+    const fieldDef = OrderFilterService.getFieldDef(field);
+    let value: any = null;
+
+    if (fieldDef?.type === 'boolean') {
+      value = adminFilterValueSelect?.value || "";
+    } else if (operator === 'between') {
+      const fromValue = adminFilterValueFrom?.value || "";
+      const toValue = adminFilterValueTo?.value || "";
+      value = [fromValue, toValue];
+    } else {
+      value = adminFilterValue?.value || "";
+    }
+
+    const newFilter: OrderFilter = { field, operator, value };
+    const validation = OrderFilterService.validateFilter(newFilter);
+    if (!validation.valid) {
+      alert("יש למלא ערך תקין לסינון.");
+      return;
+    }
+
+    state.activeOrderFilters.push(newFilter);
+    adminOrdersFilterModal?.classList.add("hidden");
+    renderAdmin();
+  });
+  adminOrdersClearFiltersBtn?.addEventListener("click", () => {
+    state.activeOrderFilters = [];
+    renderAdmin();
+  });
+  adminOrdersExportCsv?.addEventListener("click", () => {
+    const filteredOrders = getFilteredOrdersForExport();
+    OrderExportService.exportOrdersAsCSV(filteredOrders);
+  });
+  adminOrdersExportXlsx?.addEventListener("click", () => {
+    const filteredOrders = getFilteredOrdersForExport();
+    OrderExportService.exportOrdersAsXLSX(filteredOrders);
+  });
+
   if (productSearchInput) {
+
     productSearchInput.addEventListener("input", renderProducts);
   }
   if (adminAboutSave) {

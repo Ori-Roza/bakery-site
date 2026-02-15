@@ -266,4 +266,49 @@ export class AdminUI {
       adminGreetingEl.textContent = `שלום, ${email}`;
     }
   }
+
+  /**
+   * Render active filter chips
+   */
+  static renderActiveFilterChips(
+    filters: Array<{ field: string; operator: string; value: any }>,
+    filtersContainerEl: HTMLElement | null,
+    formatFilterFn: (f: any) => string,
+    onRemoveFilter: (index: number) => void
+  ): void {
+    if (!filtersContainerEl) return;
+
+    if (filters.length === 0) {
+      filtersContainerEl.classList.add('hidden');
+      filtersContainerEl.innerHTML = '';
+      return;
+    }
+
+    filtersContainerEl.classList.remove('hidden');
+    const chipsContainer = document.createElement('div');
+    chipsContainer.className = 'flex flex-wrap gap-2';
+
+    filters.forEach((filter, index) => {
+      const chip = document.createElement('div');
+      chip.className = 'inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-sm';
+      chip.innerHTML = `
+        <span>${formatFilterFn(filter)}</span>
+        <button class="ml-1 text-amber-700 hover:text-amber-900 font-semibold" data-filter-index="${index}">✕</button>
+      `;
+
+      chip.querySelector('button')?.addEventListener('click', () => {
+        onRemoveFilter(index);
+      });
+
+      chipsContainer.appendChild(chip);
+    });
+
+    // Clear existing chips (but keep the label)
+    const existingChips = filtersContainerEl.querySelector('.flex.flex-wrap');
+    if (existingChips) {
+      existingChips.remove();
+    }
+
+    filtersContainerEl.appendChild(chipsContainer);
+  }
 }

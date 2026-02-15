@@ -184,6 +184,9 @@ export interface AppState {
   pendingOrderLinks: { whatsappUrl: string; emailUrl: string } | null;
   editingCategoryRowId: string | null;
   ordersAccepting: boolean;
+  activeOrderFilters: OrderFilter[];
+  isFilterModalOpen: boolean;
+  searchOrdersText: string;
 }
 
 /**
@@ -205,4 +208,23 @@ export interface OrderMessageParams {
 export interface OrderLinks {
   whatsappUrl: string;
   emailUrl: string;
+}
+
+/**
+ * Order filter
+ */
+export interface OrderFilter {
+  field: string;
+  operator: string;
+  value: any;
+}
+
+/**
+ * Filter field definition
+ */
+export interface FilterFieldDef {
+  name: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'boolean';
+  operators: Array<{ value: string; label: string }>;
 }
