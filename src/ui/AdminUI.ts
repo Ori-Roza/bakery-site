@@ -3,6 +3,12 @@ import { CategoryResolver } from '../business/CategoryResolver';
 import type { Product, Category, Order, AppState } from '../types/models';
 
 export class AdminUI {
+  private static formatOrderDate(value: string | undefined): string {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleString("he-IL", { hour12: false });
+  }
   /**
    * Render admin products table
    */
@@ -133,6 +139,9 @@ export class AdminUI {
       } else if (orderKey === "created_at") {
         left = new Date(a.created_at).getTime();
         right = new Date(b.created_at).getTime();
+      } else if (orderKey === "pickup_date") {
+        left = new Date(a.pickup_date).getTime();
+        right = new Date(b.pickup_date).getTime();
       } else if (orderKey === "order_number") {
         left = Number(a.order_number) || 0;
         right = Number(b.order_number) || 0;
@@ -169,9 +178,10 @@ export class AdminUI {
         row.style.textDecoration = "line-through";
       }
       row.innerHTML = `
-        <td>${order.order_number ?? ""}</td>
+        <td>${order.order_number ?? order.id ?? ""}</td>
         <td>${order.customer?.name || 'Unknown'}</td>
-        <td>${new Date(order.created_at).toLocaleString("he-IL", { hour12: false })}</td>
+        <td>${AdminUI.formatOrderDate(order.created_at)}</td>
+        <td>${order.pickup_date ? new Date(order.pickup_date).toLocaleString("he-IL", { year: "numeric", month: "2-digit", day: "2-digit" }) + " " + (order.pickup_time || "") : "-"}</td>
         <td class="text-amber-900 font-semibold">${formatCurrency(
           order.total ?? 0
         )}</td>

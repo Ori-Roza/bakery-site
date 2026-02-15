@@ -390,7 +390,7 @@
                   יצירת הזמנה חדשה
                 </button>
               </div>
-              <div class="mt-4 mb-4 relative">
+              <div class="mt-4 mb-4 relative max-w-md">
                 <input
                   id="admin-orders-search"
                   class="form-input pr-10"
@@ -432,7 +432,8 @@
                     <tr>
                       <th data-sort="order_number">מזהה הזמנה</th>
                       <th data-sort="name">שם מזמין</th>
-                      <th data-sort="created_at">תאריך</th>
+                      <th data-sort="created_at">תאריך יצירה</th>
+                      <th data-sort="pickup_date">תאריך איסוף</th>
                       <th data-sort="total">סכום</th>
                       <th data-sort="paid">שולם</th>
                       <th data-sort="notes">הערות מנהל</th>
@@ -596,7 +597,8 @@
                   <option value="">בחר שדה...</option>
                   <option value="order_number">מזהה הזמנה</option>
                   <option value="customer_name">שם לקוח</option>
-                  <option value="created_at">תאריך</option>
+                  <option value="created_at">תאריך יצירה</option>
+                  <option value="pickup_date">תאריך איסוף</option>
                   <option value="total">סכום הזמנה</option>
                   <option value="paid">שולם</option>
                   <option value="deleted">נמחק</option>
@@ -804,12 +806,34 @@
             <input id="order-name" class="form-input" />
           </div>
           <div>
-            <label class="form-label" for="order-date">תאריך</label>
-            <input id="order-date" type="datetime-local" class="form-input" />
+            <label class="form-label" for="order-pickup-date">תאריך איסוף</label>
+            <input id="order-pickup-date" type="date" class="form-input" required />
+          </div>
+          <div>
+            <label class="form-label" for="order-pickup-time">שעת איסוף</label>
+            <input id="order-pickup-time" type="time" class="form-input" required />
           </div>
           <div>
             <label class="form-label" for="order-total">סכום</label>
             <input id="order-total" type="number" min="0" class="form-input" />
+            <p id="order-total-hint" class="text-xs text-stone-500 mt-1"></p>
+          </div>
+          <div>
+            <label class="form-label">מוצרים להזמנה</label>
+            <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+              <select id="order-item-product" class="form-input"></select>
+              <input
+                id="order-item-qty"
+                type="number"
+                min="1"
+                value="1"
+                class="form-input"
+              />
+              <button id="order-item-add" class="secondary-button" type="button">
+                הוסף
+              </button>
+            </div>
+            <div id="order-items-list" class="grid gap-2 mt-3"></div>
           </div>
           <label class="flex items-center gap-2 text-sm text-stone-700">
             <input id="order-paid" type="checkbox" class="form-checkbox" />

@@ -47,9 +47,16 @@
 
 - id (uuid, default: gen_random_uuid())
 - created_at (timestamp, default now())
+- pickup_date (text, nullable) — customer pickup date in YYYY-MM-DD format
+- pickup_time (text, nullable) — customer pickup time in HH:MM format
 - items (jsonb)
 - total (numeric)
 - customer (jsonb)
+- paid (boolean, default false)
+- notes (text, nullable)
+- user_notes (text, nullable)
+- order_number (integer, nullable)
+- deleted (boolean, default false)
 
 **profiles**
 
@@ -67,6 +74,10 @@
 - UPDATE/DELETE ל־products רק למשתמשים עם role = admin.
 - SELECT ל־profiles רק למשתמש עצמו (user_id = auth.uid()).
 
+### ⚙️ עדכון קיים? ראו הערה חשובה
+
+אם עדכנתם מגרסה קודמת, עליכם להוסיף עמודות `pickup_date` ו־`pickup_time` לטבלת orders.
+ראו [MIGRATION_PICKUP_DATES.md](MIGRATION_PICKUP_DATES.md) להוראות מלאות.
 
 ### 4) קונפיג מקומי
 

@@ -20,6 +20,8 @@ CREATE TABLE products (
 CREATE TABLE orders (
   id TEXT PRIMARY KEY,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  pickup_date TEXT,
+  pickup_time TEXT,
   items TEXT,
   total NUMERIC,
   customer TEXT,
@@ -28,6 +30,12 @@ CREATE TABLE orders (
   user_notes TEXT,
   order_number INTEGER,
   deleted INTEGER DEFAULT 0
+);
+
+CREATE TABLE order_items (
+  order_id TEXT,
+  product_id INTEGER,
+  qty INTEGER DEFAULT 1
 );
 
 CREATE TABLE profiles (

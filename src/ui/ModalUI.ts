@@ -210,10 +210,11 @@ export class ModalUI {
       <div><strong>מזהה הזמנה:</strong> ${order.order_number ?? ""}</div>
       <div><strong>שם:</strong> ${order.customer?.name || ""}</div>
       <div><strong>טלפון:</strong> ${order.customer?.phone || ""}</div>
-      <div><strong>תאריך:</strong> ${new Date(order.created_at).toLocaleString(
+      <div><strong>תאריך יצירה:</strong> ${new Date(order.created_at).toLocaleString(
         "he-IL",
         { hour12: false }
       )}</div>
+      <div><strong>תאריך איסוף:</strong> ${order.pickup_date ? new Date(order.pickup_date).toLocaleDateString("he-IL") + " " + (order.pickup_time || "") : "-"}</div>
       <div><strong>סכום:</strong> ${formatCurrency(order.total ?? 0)}</div>
       <div><strong>שולם:</strong> ${order.paid ? "כן" : "לא"}</div>
       <div><strong>הערות מנהל:</strong> ${order.notes || "-"}</div>

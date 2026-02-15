@@ -1,9 +1,9 @@
 /**
- * Browser-compatible in-memory mock for Supabase client.
- * Used by dev:local (Vite + MOCK_DB=true) for local development.
+ * IndexedDB-backed mock for Supabase client.
+ * Used by dev:local (Vite + MOCK_DB=true) for local development with persistent data.
  * 
- * Unlike sqliteSupabaseMock.js (which uses sql.js/WASM for tests),
- * this uses plain JS arrays — no WASM, no Node dependencies.
+ * Data persists across hot reloads and page refreshes while the dev server is running.
+ * IndexedDB is cleared only when the browser tab is closed or cache is cleared.
  */
 
 // ── Seed data ──────────────────────────────────────────────
@@ -20,8 +20,9 @@ const SEED = {
     { id: 104, title: "עוגת גבינה", price: 48, discount_percentage: 15, image: "assets/wheat.png", in_stock: true, category_id: 2 },
   ],
   orders: [],
+  order_items: [],
   profiles: [
-    { user_id: "admin-1", role: "admin" },
+    { id: 1, user_id: "admin-1", role: "admin" },
   ],
   site_metadata: [
     {
@@ -45,12 +46,149 @@ const SEED = {
   featured_products: [],
 };
 
+const DB_NAME = "bakery-mock-db";
+const DB_VERSION = 4; // Incremented to force re-seed after adding pickup_date/pickup_time
+
+// ── IndexedDB Manager ──────────────────────────────────────
+
+class IndexedDBManager {
+  constructor() {
+    this.db = null;
+    this.initPromise = this.init();
+  }
+
+  async init() {
+    if (this.db) return this.db;
+
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onerror = () => {
+        console.error("[MockDB] IndexedDB open error:", request.error);
+        reject(request.error);
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        console.log("[MockDB] IndexedDB initialized");
+        // Log seed data for debugging
+        this.logTableCounts();
+        resolve(this.db);
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        const tx = event.target.transaction;
+        // Create object stores (tables) if they don't exist
+        const tables = Object.keys(SEED);
+        for (const table of tables) {
+          if (!db.objectStoreNames.contains(table)) {
+            db.createObjectStore(table, { keyPath: "id" });
+          }
+        }
+        // Seed data using the upgrade transaction
+        for (const table of tables) {
+          const store = tx.objectStore(table);
+          const seedData = SEED[table] || [];
+          for (const item of seedData) {
+            store.add(item);
+          }
+        }
+      };
+    });
+  }
+
+  seedTable(db, tableName) {
+    const tx = db.transaction([tableName], "readwrite");
+    const store = tx.objectStore(tableName);
+    const seedData = SEED[tableName] || [];
+    for (const item of seedData) {
+      store.add(item);
+    }
+  }
+
+  async getAllFromTable(tableName) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readonly");
+      const store = tx.objectStore(tableName);
+      const request = store.getAll();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result || []);
+    });
+  }
+
+  async getFromTable(tableName, key) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readonly");
+      const store = tx.objectStore(tableName);
+      const request = store.get(key);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result || null);
+    });
+  }
+
+  async addToTable(tableName, item) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readwrite");
+      const store = tx.objectStore(tableName);
+      const request = store.add(item);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(item);
+    });
+  }
+
+  async putToTable(tableName, item) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readwrite");
+      const store = tx.objectStore(tableName);
+      const request = store.put(item);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(item);
+    });
+  }
+
+  async deleteFromTable(tableName, key) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readwrite");
+      const store = tx.objectStore(tableName);
+      const request = store.delete(key);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(true);
+    });
+  }
+
+  async clearTable(tableName) {
+    await this.initPromise;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([tableName], "readwrite");
+      const store = tx.objectStore(tableName);
+      const request = store.clear();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(true);
+    });
+  }
+
+  async logTableCounts() {
+    const tables = Object.keys(SEED);
+    for (const table of tables) {
+      const rows = await this.getAllFromTable(table);
+      console.log(`[MockDB] ${table}: ${rows.length} rows`);
+    }
+  }
+}
+
+const idb = new IndexedDBManager();
+
 // ── Query builder (mimics Supabase's chained API) ──────────
 
 class MockQuery {
-  constructor(db, table) {
-    this._db = db;
-    this._table = table;
+  constructor(tableName) {
+    this._table = tableName;
     this._op = null;
     this._payload = null;
     this._filters = [];
@@ -73,15 +211,42 @@ class MockQuery {
     return this;
   }
 
-  insert(rows) { this._op = "insert"; this._payload = Array.isArray(rows) ? rows : [rows]; return this; }
-  update(vals) { this._op = "update"; this._payload = vals; return this; }
-  delete()     { this._op = "delete"; return this; }
+  insert(rows) {
+    this._op = "insert";
+    this._payload = Array.isArray(rows) ? rows : [rows];
+    return this;
+  }
 
-  eq(col, val) { this._filters.push({ col, val }); return this; }
+  update(vals) {
+    this._op = "update";
+    this._payload = vals;
+    return this;
+  }
 
-  order(col, { ascending = true } = {}) { this._orderBy = { col, ascending }; return this; }
-  limit(n) { this._limitN = n; return this; }
-  single() { this._single = true; return this; }
+  delete() {
+    this._op = "delete";
+    return this;
+  }
+
+  eq(col, val) {
+    this._filters.push({ col, val });
+    return this;
+  }
+
+  order(col, { ascending = true } = {}) {
+    this._orderBy = { col, ascending };
+    return this;
+  }
+
+  limit(n) {
+    this._limitN = n;
+    return this;
+  }
+
+  single() {
+    this._single = true;
+    return this;
+  }
 
   // ── Execution ──
 
@@ -116,12 +281,11 @@ class MockQuery {
   }
 
   async _exec() {
-    const table = this._db[this._table];
-    if (!table) return { data: null, error: { message: `Table ${this._table} not found` } };
-
     try {
       if (this._op === "select" || (!this._op && this._selectCols)) {
-        let rows = this._applyFilters(table);
+        let rows = await idb.getAllFromTable(this._table);
+        if (!rows) return { data: null, error: { message: `Table ${this._table} not found` } };
+        rows = this._applyFilters(rows);
         rows = this._applyOrder(rows);
         if (this._limitN != null) rows = rows.slice(0, this._limitN);
         rows = rows.map(r => this._pickCols(r));
@@ -134,9 +298,10 @@ class MockQuery {
         for (const row of this._payload) {
           const newRow = { ...row };
           if (newRow.id == null) {
-            newRow.id = table.length ? Math.max(...table.map(r => r.id || 0)) + 1 : 1;
+            // Generate a simple numeric or UUID id
+            newRow.id = row.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
           }
-          table.push(newRow);
+          await idb.addToTable(this._table, newRow);
           inserted.push(newRow);
         }
         if (this._selectAfterWrite) {
@@ -147,9 +312,11 @@ class MockQuery {
       }
 
       if (this._op === "update") {
-        const matching = this._applyFilters(table);
+        const allRows = await idb.getAllFromTable(this._table);
+        const matching = this._applyFilters(allRows);
         for (const row of matching) {
-          Object.assign(row, this._payload);
+          const updated = { ...row, ...this._payload };
+          await idb.putToTable(this._table, updated);
         }
         if (this._selectAfterWrite) {
           const data = this._single ? matching[0] || null : matching;
@@ -159,9 +326,11 @@ class MockQuery {
       }
 
       if (this._op === "delete") {
-        const matching = this._applyFilters(table);
-        const ids = new Set(matching.map(r => r.id));
-        this._db[this._table] = table.filter(r => !ids.has(r.id));
+        const allRows = await idb.getAllFromTable(this._table);
+        const matching = this._applyFilters(allRows);
+        for (const row of matching) {
+          await idb.deleteFromTable(this._table, row.id);
+        }
         if (this._selectAfterWrite) {
           return { data: matching, error: null };
         }
@@ -169,8 +338,10 @@ class MockQuery {
       }
 
       // Default: select all
-      return { data: [...table], error: null };
+      const rows = await idb.getAllFromTable(this._table);
+      return { data: rows || [], error: null };
     } catch (err) {
+      console.error(`[MockDB] Error in ${this._op} on ${this._table}:`, err);
       return { data: null, error: err };
     }
   }
@@ -234,20 +405,23 @@ function createMockStorage() {
 // ── Public API ─────────────────────────────────────────────
 
 export function createBrowserMockClient() {
-  // Deep-clone seed data so mutations don't leak between reloads
-  const db = JSON.parse(JSON.stringify(SEED));
-
   const client = {
-    from: (table) => new MockQuery(db, table),
+    from: (table) => new MockQuery(table),
     auth: createMockAuth(),
     storage: createMockStorage(),
   };
 
-  console.log("[MockDB] Initialized with:", {
-    categories: db.categories.length,
-    products: db.products.length,
-    site_metadata: db.site_metadata.length,
-  });
+  console.log("[MockDB] Initialized with IndexedDB persistence (data survives hot reload)");
+  console.log("[MockDB] To clear local data, run: clearMockDB()");
+
+  // Expose reset function for debugging
+  if (typeof window !== "undefined") {
+    window.clearMockDB = async () => {
+      const result = await indexedDB.deleteDatabase(DB_NAME);
+      console.log("[MockDB] Cleared IndexedDB. Refreshing page...");
+      setTimeout(() => location.reload(), 500);
+    };
+  }
 
   return client;
 }

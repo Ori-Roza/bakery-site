@@ -65,8 +65,8 @@ export interface Order {
     name: string;
     phone: string;
   };
-  pickup_date?: string;
-  pickup_time?: string;
+  pickup_date: string;
+  pickup_time: string;
   total_price?: number;
   total?: number;
   paid: boolean;
@@ -74,6 +74,7 @@ export interface Order {
   user_notes?: string;
   order_number?: number | string;
   items: OrderItem[];
+  order_items?: OrderItemRelation[];
   created_at: string;
   deleted?: boolean;
   status?: string;
@@ -88,6 +89,16 @@ export interface OrderItem {
   qty: number;
   price: number;
   lineTotal: number;
+}
+
+/**
+ * Order item relation (orders <-> products)
+ */
+export interface OrderItemRelation {
+  order_id: string;
+  product_id: number;
+  qty: number;
+  products?: Product | ProductDbRow;
 }
 
 /**
