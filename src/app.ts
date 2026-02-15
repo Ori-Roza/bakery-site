@@ -1,4 +1,19 @@
 import { formatCurrency, formatDateForInput } from './utils/formatters';
+import {
+  buildDailySeries,
+  computeAverageOrders,
+  computeKpis,
+  computeMonthlySeasonality,
+  computeOrderHourDistribution,
+  computePickupHourDistribution,
+  computePopularProducts,
+  filterOrdersByRange,
+  getDateRange,
+  getOrderTotal,
+  getPreviousDateRange,
+  type StatsRangeKey,
+  type StatsSeriesKey,
+} from './utils/statistics';
 import { 
   getNextBusinessDateTime,
   getPickupDateTime 
@@ -86,6 +101,26 @@ const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") 
 const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
 const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
 const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const statsRangeSelect = document.getElementById("stats-range") as HTMLSelectElement | null;
+const statsOrdersValue = document.getElementById("stats-orders-value") as HTMLElement | null;
+const statsRevenueValue = document.getElementById("stats-revenue-value") as HTMLElement | null;
+const statsConversionValue = document.getElementById("stats-conversion-value") as HTMLElement | null;
+const statsAovValue = document.getElementById("stats-aov-value") as HTMLElement | null;
+const statsOrdersDelta = document.getElementById("stats-orders-delta") as HTMLElement | null;
+const statsRevenueDelta = document.getElementById("stats-revenue-delta") as HTMLElement | null;
+const statsAovDelta = document.getElementById("stats-aov-delta") as HTMLElement | null;
+const statsTrendChart = document.getElementById("stats-trend-chart") as HTMLElement | null;
+const statsTrendLegend = document.getElementById("stats-trend-legend") as HTMLElement | null;
+const statsPopularList = document.getElementById("stats-popular-list") as HTMLElement | null;
+const statsPickupChart = document.getElementById("stats-pickup-chart") as HTMLElement | null;
+const statsOrderHourChart = document.getElementById("stats-order-hour-chart") as HTMLElement | null;
+const statsAvgDay = document.getElementById("stats-avg-day") as HTMLElement | null;
+const statsAvgWeek = document.getElementById("stats-avg-week") as HTMLElement | null;
+const statsSeasonalityChart = document.getElementById("stats-seasonality-chart") as HTMLElement | null;
+const statsLatestOrders = document.getElementById("stats-latest-orders") as HTMLElement | null;
+const statsSeriesButtons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("[data-stats-series]")
+);
 const adminOrdersFilterModal = document.getElementById("admin-orders-filter-modal") as HTMLElement | null;
 const adminFilterModalClose = document.getElementById("admin-filter-modal-close") as HTMLElement | null;
 const adminFilterField = document.getElementById("admin-filter-field") as HTMLSelectElement | null;
@@ -744,6 +779,225 @@ const renderAdmin = () => {
     `;
     adminOrdersEl.appendChild(row);
   });
+
+  renderStatistics();
+};
+
+const formatStatsDate = (value: Date): string =>
+  value.toLocaleDateString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const formatDeltaText = (value: number) => {
+  const rounded = Math.abs(value) < 0.05 ? 0 : value;
+  if (rounded === 0) {
+    return { text: "ללא שינוי", className: "" };
+  }
+  const direction = rounded > 0 ? "עלייה" : "ירידה";
+  const className = rounded > 0 ? "positive" : "negative";
+  return {
+    text: `${direction} של ${Math.abs(rounded).toFixed(1)}%`,
+    className,
+  };
+};
+
+const renderBarSeries = (
+  container: HTMLElement | null,
+  entries: Array<{ label: string; value: number }>,
+  labelEvery = 1
+): void => {
+  if (!container) return;
+  if (!entries.length) {
+    container.innerHTML =
+      "<div class='text-sm text-stone-500 w-full text-center'>אין נתונים להצגה</div>";
+    return;
+  }
+
+  const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
+  container.innerHTML = entries
+    .map((entry, index) => {
+      const height = Math.max(6, (entry.value / maxValue) * 160);
+      const label = index % labelEvery === 0 ? entry.label : "";
+      const title = `${entry.label} · ${entry.value}`;
+      return `
+        <div class="stats-bar-group" title="${title}">
+          <div class="stats-bar" style="height: ${height}px"></div>
+          <div class="stats-bar-label">${label}</div>
+        </div>
+      `;
+    })
+    .join("");
+};
+
+const renderStatistics = () => {
+  if (!statsOrdersValue || !statsTrendChart) return;
+
+  const selectedRange =
+    (statsRangeSelect?.value || state.statsRange || "this_month") as StatsRangeKey;
+  state.statsRange = selectedRange;
+  if (statsRangeSelect && statsRangeSelect.value !== selectedRange) {
+    statsRangeSelect.value = selectedRange;
+  }
+
+  const selectedSeries = (state.statsSeries || "revenue") as StatsSeriesKey;
+  const range = getDateRange(selectedRange);
+  const previousRange = getPreviousDateRange(selectedRange);
+  const rangeOrders = filterOrdersByRange(state.orders, range);
+  const previousOrders = filterOrdersByRange(state.orders, previousRange);
+  const kpis = computeKpis(rangeOrders, previousOrders);
+
+  statsOrdersValue.textContent = String(kpis.totalOrders);
+  if (statsRevenueValue) {
+    statsRevenueValue.textContent = formatCurrency(kpis.totalRevenue);
+  }
+  if (statsConversionValue) {
+    statsConversionValue.textContent = `${kpis.conversionRate.toFixed(1)}%`;
+  }
+  if (statsAovValue) {
+    statsAovValue.textContent = formatCurrency(kpis.averageOrderValue);
+  }
+
+  const applyDelta = (el: HTMLElement | null, value: number) => {
+    if (!el) return;
+    const { text, className } = formatDeltaText(value);
+    el.textContent = text;
+    el.classList.remove("positive", "negative");
+    if (className) {
+      el.classList.add(className);
+    }
+  };
+
+  applyDelta(statsOrdersDelta, kpis.deltaOrders);
+  applyDelta(statsRevenueDelta, kpis.deltaRevenue);
+  applyDelta(statsAovDelta, kpis.deltaAverageOrder);
+
+  statsSeriesButtons.forEach((button) => {
+    const isActive = button.dataset.statsSeries === selectedSeries;
+    button.classList.toggle("active", isActive);
+  });
+
+  const series = buildDailySeries(rangeOrders, range);
+  const seriesEntries = series.map((entry) => ({
+    label: entry.label,
+    value: selectedSeries === "revenue" ? entry.revenue : entry.orders,
+  }));
+  const labelEvery = Math.max(1, Math.ceil(seriesEntries.length / 8));
+  renderBarSeries(statsTrendChart, seriesEntries, labelEvery);
+
+  if (statsTrendLegend) {
+    statsTrendLegend.textContent = `טווח: ${formatStatsDate(
+      range.start
+    )} - ${formatStatsDate(range.end)}`;
+  }
+
+  if (statsPopularList) {
+    const popular = computePopularProducts(rangeOrders, 5);
+    if (!popular.length) {
+      statsPopularList.innerHTML =
+        "<div class='text-sm text-stone-500'>אין נתונים להצגה</div>";
+    } else {
+      statsPopularList.innerHTML = popular
+        .map((item) => {
+          const width = Math.max(6, item.share);
+          return `
+            <div class="stats-list-item">
+              <div class="stats-list-header">
+                <span>${item.title}</span>
+                <span>${item.qty} · ${item.share.toFixed(1)}%</span>
+              </div>
+              <div class="stats-list-bar">
+                <div class="stats-list-bar-fill" style="width: ${width}%"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  renderBarSeries(
+    statsPickupChart,
+    computePickupHourDistribution(rangeOrders).map((entry) => ({
+      label: entry.label,
+      value: entry.count,
+    })),
+    1
+  );
+
+  renderBarSeries(
+    statsOrderHourChart,
+    computeOrderHourDistribution(rangeOrders).map((entry) => ({
+      label: entry.label,
+      value: entry.count,
+    })),
+    1
+  );
+
+  const averages = computeAverageOrders(rangeOrders, range);
+  if (statsAvgDay) {
+    statsAvgDay.textContent = averages.perDay.toFixed(1);
+  }
+  if (statsAvgWeek) {
+    statsAvgWeek.textContent = averages.perWeek.toFixed(1);
+  }
+
+  renderBarSeries(
+    statsSeasonalityChart,
+    computeMonthlySeasonality(state.orders).map((entry) => ({
+      label: entry.label,
+      value: entry.count,
+    })),
+    1
+  );
+
+  if (statsLatestOrders) {
+    const latest = [...rangeOrders]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 6);
+
+    if (!latest.length) {
+      statsLatestOrders.innerHTML =
+        "<tr><td colspan='7' class='text-sm text-stone-500'>אין נתונים להצגה</td></tr>";
+    } else {
+      statsLatestOrders.innerHTML = latest
+        .map((order) => {
+          const relatedItems = Array.isArray(order.order_items) ? order.order_items : [];
+          const items = relatedItems.length ? relatedItems : order.items || [];
+          const firstItem = items[0];
+          const relatedProduct = firstItem
+            ? Array.isArray(firstItem.products)
+              ? firstItem.products[0]
+              : firstItem.products
+            : null;
+          const title = relatedProduct?.title || firstItem?.title || "-";
+          const extraCount = items.length > 1 ? ` ועוד ${items.length - 1}` : "";
+          const total = getOrderTotal(order);
+          const status = order.deleted
+            ? { label: "בוטל", className: "cancelled" }
+            : order.paid
+            ? { label: "הושלם", className: "completed" }
+            : { label: "ממתין", className: "pending" };
+          return `
+            <tr>
+              <td>${title}${extraCount}</td>
+              <td>${order.order_number ?? order.id ?? ""}</td>
+              <td>${formatStatsDate(new Date(order.created_at))}</td>
+              <td>${order.customer?.name || ""}</td>
+              <td><span class="stats-status-pill ${status.className}">${status.label}</span></td>
+              <td>${formatCurrency(total)}</td>
+              <td>
+                <button class="secondary-button text-xs" data-stats-action="view-order" data-order-id="${
+                  order.id
+                }">צפייה</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+  }
 };
 
 const updateRoute = () => {
@@ -3397,6 +3651,32 @@ const setupListeners = () => {
   adminOrdersExportXlsx?.addEventListener("click", () => {
     const filteredOrders = getFilteredOrdersForExport();
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
+  });
+
+  statsRangeSelect?.addEventListener("change", () => {
+    state.statsRange = statsRangeSelect.value;
+    renderStatistics();
+  });
+
+  statsSeriesButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const series = button.dataset.statsSeries as StatsSeriesKey | undefined;
+      if (!series) return;
+      state.statsSeries = series;
+      renderStatistics();
+    });
+  });
+
+  statsLatestOrders?.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement | null)?.closest(
+      "button[data-stats-action='view-order']"
+    ) as HTMLElement | null;
+    if (!button) return;
+    const orderId = button.dataset.orderId;
+    if (!orderId) return;
+    const order = state.orders.find((item) => String(item.id) === String(orderId));
+    if (!order) return;
+    showOrderDetails(order);
   });
 
   if (productSearchInput) {

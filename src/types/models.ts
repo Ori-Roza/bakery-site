@@ -198,6 +198,8 @@ export interface AppState {
   activeOrderFilters: OrderFilter[];
   isFilterModalOpen: boolean;
   searchOrdersText: string;
+  statsRange: string;
+  statsSeries: string;
 }
 
 /**

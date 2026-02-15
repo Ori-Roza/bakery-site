@@ -42,6 +42,8 @@ const initialState: AppState = {
   activeOrderFilters: [],
   isFilterModalOpen: false,
   searchOrdersText: '',
+  statsRange: "this_month",
+  statsSeries: "revenue",
 };
 
 /**
