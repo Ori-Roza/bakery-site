@@ -36,6 +36,7 @@ const initializeMockDb = async () => {
   console.log('✅ Mock database ready with sample data:');
   console.log('   - 2 Categories (חלה, עוגות)');
   console.log('   - 2 Products (חלה קלועה, עוגת שוקולד)');
+  console.log('   - Sample orders for analytics');
   console.log('   - Site metadata');
   
   return mockDbClient;
@@ -142,6 +143,7 @@ const tryListen = (port) => {
     console.log('📝 Sample Data:');
     console.log('   Categories: חלה, עוגות');
     console.log('   Products: חלה קלועה, עוגת שוקולד\n');
+    console.log('   Orders: 6 דוגמאות להזמנות\n');
     console.log('Press Ctrl+C to stop the server\n');
   });
 

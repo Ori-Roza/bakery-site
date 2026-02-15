@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildCustomRange,
   computeKpis,
   computePopularProducts,
   filterOrdersByRange,
@@ -37,6 +38,14 @@ describe("statistics helpers", () => {
     const previous = getPreviousDateRange("this_month", now);
     expect(previous.start.getMonth()).toBe(0);
     expect(previous.end.getMonth()).toBe(0);
+  });
+
+  it("builds a custom range and swaps inverted dates", () => {
+    const fallback = getDateRange("this_month", new Date(2026, 1, 15));
+    const range = buildCustomRange("2026-02-20", "2026-02-05", fallback);
+    expect(range.start <= range.end).toBe(true);
+    expect(range.start.getDate()).toBe(5);
+    expect(range.end.getDate()).toBe(20);
   });
 
   it("computes KPI totals and deltas", () => {

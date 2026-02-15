@@ -1,6 +1,11 @@
 import type { Order } from "../types/models";
 
-export type StatsRangeKey = "this_month" | "last_30_days" | "last_90_days" | "this_year";
+export type StatsRangeKey =
+  | "this_month"
+  | "last_30_days"
+  | "last_90_days"
+  | "this_year"
+  | "custom";
 export type StatsSeriesKey = "revenue" | "orders";
 
 export type DateRange = {
@@ -38,7 +43,7 @@ const addDays = (value: Date, days: number): Date =>
 const addMonths = (value: Date, months: number): Date =>
   new Date(value.getFullYear(), value.getMonth() + months, 1);
 
-const safeDate = (value: string | Date | undefined): Date | null => {
+const safeDate = (value: string | Date | undefined | null): Date | null => {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -66,9 +71,32 @@ export const getDateRange = (key: StatsRangeKey, now: Date = new Date()): DateRa
       const end = endOfDay(new Date(today.getFullYear(), 11, 31));
       return { start, end };
     }
+    case "custom": {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = endOfDay(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+      return { start, end };
+    }
     default:
       return { start: today, end: endOfDay(today) };
   }
+};
+
+export const buildCustomRange = (
+  startValue: string | Date | null | undefined,
+  endValue: string | Date | null | undefined,
+  fallback: DateRange
+): DateRange => {
+  const startDate = safeDate(startValue) || fallback.start;
+  const endDate = safeDate(endValue) || fallback.end;
+  const normalizedStart = startOfDay(startDate);
+  const normalizedEnd = endOfDay(endDate);
+  if (normalizedStart > normalizedEnd) {
+    return {
+      start: startOfDay(endDate),
+      end: endOfDay(startDate),
+    };
+  }
+  return { start: normalizedStart, end: normalizedEnd };
 };
 
 export const getPreviousDateRange = (

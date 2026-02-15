@@ -16,6 +16,12 @@ import path from 'path';
 
 // Custom seed function with more sample data
 const customSeed = (db) => {
+  const now = Date.now();
+  const dayMs = 1000 * 60 * 60 * 24;
+  const formatDate = (date) => date.toISOString().split("T")[0];
+  const isoDaysAgo = (days) => new Date(now - days * dayMs).toISOString();
+  const pickupDateFromNow = (days) => formatDate(new Date(now + days * dayMs));
+
   // Insert categories
   db.prepare("INSERT INTO categories (id, name, image_url) VALUES (?, ?, ?)").run(
     1, "חלה", "assets/all_categories.png"
@@ -58,6 +64,73 @@ const customSeed = (db) => {
     "ברוכים הבאים לבית מאפה",
     "בית המאפה שלנו"
   );
+
+  const orders = [
+    {
+      id: "order-2001",
+      createdAt: isoDaysAgo(1),
+      pickupDate: pickupDateFromNow(1),
+      pickupTime: "08:30",
+      items: [
+        { title: "חלה קלועה", qty: 2, price: 18.5, lineTotal: 37 },
+        { title: "עוגת וניל", qty: 1, price: 38, lineTotal: 38 },
+      ],
+      total: 75,
+      customer: { name: "שחר גבע", phone: "0501111111" },
+      paid: 1,
+      notes: "",
+      userNotes: "",
+      orderNumber: 2201,
+      deleted: 0,
+    },
+    {
+      id: "order-2002",
+      createdAt: isoDaysAgo(7),
+      pickupDate: pickupDateFromNow(2),
+      pickupTime: "11:15",
+      items: [{ title: "ממתקי שוקולד", qty: 3, price: 12, lineTotal: 36 }],
+      total: 36,
+      customer: { name: "רון שפר", phone: "0502222222" },
+      paid: 0,
+      notes: "",
+      userNotes: "",
+      orderNumber: 2202,
+      deleted: 0,
+    },
+    {
+      id: "order-2003",
+      createdAt: isoDaysAgo(14),
+      pickupDate: pickupDateFromNow(3),
+      pickupTime: "15:00",
+      items: [{ title: "עוגת שוקולד", qty: 2, price: 42, lineTotal: 84 }],
+      total: 84,
+      customer: { name: "לירון כהן", phone: "0503333333" },
+      paid: 1,
+      notes: "",
+      userNotes: "ללא גלוטן",
+      orderNumber: 2203,
+      deleted: 0,
+    },
+  ];
+
+  orders.forEach((order) => {
+    db.prepare(
+      "INSERT INTO orders (id, created_at, pickup_date, pickup_time, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(
+      order.id,
+      order.createdAt,
+      order.pickupDate,
+      order.pickupTime,
+      JSON.stringify(order.items),
+      order.total,
+      JSON.stringify(order.customer),
+      order.paid,
+      order.notes,
+      order.userNotes,
+      order.orderNumber,
+      order.deleted
+    );
+  });
 };
 
 const main = async () => {

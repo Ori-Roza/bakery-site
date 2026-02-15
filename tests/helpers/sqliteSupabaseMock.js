@@ -69,6 +69,12 @@ CREATE TABLE featured_products (
 `;
 
 const defaultSeed = (db) => {
+  const now = Date.now();
+  const dayMs = 1000 * 60 * 60 * 24;
+  const formatDate = (date) => date.toISOString().split("T")[0];
+  const isoDaysAgo = (days) => new Date(now - days * dayMs).toISOString();
+  const pickupDateFromNow = (days) => formatDate(new Date(now + days * dayMs));
+
   db.prepare("INSERT INTO categories (id, name, image_url) VALUES (?, ?, ?)").run(
     1,
     "חלה",
@@ -88,6 +94,115 @@ const defaultSeed = (db) => {
   db.prepare(
     "INSERT INTO site_metadata (id, about_section, orders_accepting, contact_email) VALUES (?, ?, ?, ?)"
   ).run(1, "טקסט אודות", 1, "test@example.com");
+
+  const orders = [
+    {
+      id: "order-1001",
+      createdAt: isoDaysAgo(2),
+      pickupDate: pickupDateFromNow(1),
+      pickupTime: "09:00",
+      items: [
+        { title: "חלה קלועה", qty: 2, price: 18.5, lineTotal: 37 },
+        { title: "עוגת שוקולד", qty: 1, price: 42, lineTotal: 42 },
+      ],
+      total: 79,
+      customer: { name: "דוד כהן", phone: "0501234567" },
+      paid: 1,
+      notes: "לקוח חוזר",
+      userNotes: "לא לשכוח שקית",
+      orderNumber: 1201,
+      deleted: 0,
+    },
+    {
+      id: "order-1002",
+      createdAt: isoDaysAgo(5),
+      pickupDate: pickupDateFromNow(2),
+      pickupTime: "12:30",
+      items: [{ title: "חלה שחורה", qty: 1, price: 22, lineTotal: 22 }],
+      total: 22,
+      customer: { name: "שירה לוי", phone: "0502345678" },
+      paid: 0,
+      notes: "",
+      userNotes: "",
+      orderNumber: 1202,
+      deleted: 0,
+    },
+    {
+      id: "order-1003",
+      createdAt: isoDaysAgo(12),
+      pickupDate: pickupDateFromNow(3),
+      pickupTime: "16:00",
+      items: [{ title: "עוגת שוקולד", qty: 2, price: 42, lineTotal: 84 }],
+      total: 84,
+      customer: { name: "נועם ברק", phone: "0503456789" },
+      paid: 1,
+      notes: "",
+      userNotes: "ללא אגוזים",
+      orderNumber: 1203,
+      deleted: 0,
+    },
+    {
+      id: "order-1004",
+      createdAt: isoDaysAgo(20),
+      pickupDate: pickupDateFromNow(4),
+      pickupTime: "08:15",
+      items: [{ title: "חלה קלועה", qty: 3, price: 18.5, lineTotal: 55.5 }],
+      total: 55.5,
+      customer: { name: "מורן יעקב", phone: "0504567890" },
+      paid: 0,
+      notes: "",
+      userNotes: "",
+      orderNumber: 1204,
+      deleted: 0,
+    },
+    {
+      id: "order-1005",
+      createdAt: isoDaysAgo(33),
+      pickupDate: pickupDateFromNow(5),
+      pickupTime: "11:00",
+      items: [{ title: "עוגת וניל", qty: 1, price: 38, lineTotal: 38 }],
+      total: 38,
+      customer: { name: "הילה צור", phone: "0505678901" },
+      paid: 1,
+      notes: "",
+      userNotes: "",
+      orderNumber: 1205,
+      deleted: 0,
+    },
+    {
+      id: "order-1006",
+      createdAt: isoDaysAgo(40),
+      pickupDate: pickupDateFromNow(6),
+      pickupTime: "10:45",
+      items: [{ title: "ממתקי שוקולד", qty: 4, price: 12, lineTotal: 48 }],
+      total: 48,
+      customer: { name: "עידן לוי", phone: "0506789012" },
+      paid: 0,
+      notes: "",
+      userNotes: "",
+      orderNumber: 1206,
+      deleted: 1,
+    },
+  ];
+
+  orders.forEach((order) => {
+    db.prepare(
+      "INSERT INTO orders (id, created_at, pickup_date, pickup_time, items, total, customer, paid, notes, user_notes, order_number, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(
+      order.id,
+      order.createdAt,
+      order.pickupDate,
+      order.pickupTime,
+      JSON.stringify(order.items),
+      order.total,
+      JSON.stringify(order.customer),
+      order.paid,
+      order.notes,
+      order.userNotes,
+      order.orderNumber,
+      order.deleted
+    );
+  });
 };
 
 const serializeValue = (value) => {

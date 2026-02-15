@@ -44,6 +44,9 @@ const initialState: AppState = {
   searchOrdersText: '',
   statsRange: "this_month",
   statsSeries: "revenue",
+  statsRangeStart: "",
+  statsRangeEnd: "",
+  adminView: "stats",
 };
 
 /**

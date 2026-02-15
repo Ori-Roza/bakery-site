@@ -1,5 +1,6 @@
 import { formatCurrency, formatDateForInput } from './utils/formatters';
 import {
+  buildCustomRange,
   buildDailySeries,
   computeAverageOrders,
   computeKpis,
@@ -101,7 +102,13 @@ const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") 
 const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
 const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
 const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const adminViewStatsBtn = document.getElementById("admin-view-stats") as HTMLElement | null;
+const adminViewManageBtn = document.getElementById("admin-view-manage") as HTMLElement | null;
+const adminStatsView = document.getElementById("admin-stats-view") as HTMLElement | null;
+const adminManageView = document.getElementById("admin-manage-view") as HTMLElement | null;
 const statsRangeSelect = document.getElementById("stats-range") as HTMLSelectElement | null;
+const statsRangeStartInput = document.getElementById("stats-range-start") as HTMLInputElement | null;
+const statsRangeEndInput = document.getElementById("stats-range-end") as HTMLInputElement | null;
 const statsOrdersValue = document.getElementById("stats-orders-value") as HTMLElement | null;
 const statsRevenueValue = document.getElementById("stats-revenue-value") as HTMLElement | null;
 const statsConversionValue = document.getElementById("stats-conversion-value") as HTMLElement | null;
@@ -783,12 +790,39 @@ const renderAdmin = () => {
   renderStatistics();
 };
 
+const setAdminView = (view: "stats" | "manage") => {
+  state.adminView = view;
+  adminStatsView?.classList.toggle("hidden", view !== "stats");
+  adminManageView?.classList.toggle("hidden", view !== "manage");
+  adminViewStatsBtn?.classList.toggle("active", view === "stats");
+  adminViewManageBtn?.classList.toggle("active", view === "manage");
+};
+
 const formatStatsDate = (value: Date): string =>
   value.toLocaleDateString("he-IL", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
+
+const statsStartOfDay = (value: Date): Date =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate());
+
+const statsEndOfDay = (value: Date): Date =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
+
+const getPreviousStatsRange = (range: { start: Date; end: Date }, key: StatsRangeKey) => {
+  if (key !== "custom") {
+    return getPreviousDateRange(key);
+  }
+  const start = statsStartOfDay(range.start);
+  const end = statsStartOfDay(range.end);
+  const dayMs = 1000 * 60 * 60 * 24;
+  const days = Math.max(0, Math.round((end.getTime() - start.getTime()) / dayMs));
+  const prevEnd = statsEndOfDay(new Date(start.getTime() - dayMs));
+  const prevStart = statsStartOfDay(new Date(start.getTime() - (days + 1) * dayMs));
+  return { start: prevStart, end: prevEnd };
+};
 
 const formatDeltaText = (value: number) => {
   const rounded = Math.abs(value) < 0.05 ? 0 : value;
@@ -851,9 +885,39 @@ const renderStatistics = () => {
     statsRangeSelect.value = selectedRange;
   }
 
+  const baseRange = getDateRange(
+    selectedRange === "custom" ? "this_month" : selectedRange
+  );
+
+  if (statsRangeStartInput && statsRangeEndInput) {
+    if (selectedRange !== "custom") {
+      statsRangeStartInput.value = formatDateForInput(baseRange.start);
+      statsRangeEndInput.value = formatDateForInput(baseRange.end);
+      state.statsRangeStart = statsRangeStartInput.value;
+      state.statsRangeEnd = statsRangeEndInput.value;
+    } else {
+      if (!statsRangeStartInput.value && !statsRangeEndInput.value) {
+        statsRangeStartInput.value = state.statsRangeStart || formatDateForInput(baseRange.start);
+        statsRangeEndInput.value = state.statsRangeEnd || formatDateForInput(baseRange.end);
+        state.statsRangeStart = statsRangeStartInput.value;
+        state.statsRangeEnd = statsRangeEndInput.value;
+      }
+      if (state.statsRangeStart && !statsRangeStartInput.value) {
+        statsRangeStartInput.value = state.statsRangeStart;
+      }
+      if (state.statsRangeEnd && !statsRangeEndInput.value) {
+        statsRangeEndInput.value = state.statsRangeEnd;
+      }
+    }
+  }
+
   const selectedSeries = (state.statsSeries || "revenue") as StatsSeriesKey;
-  const range = getDateRange(selectedRange);
-  const previousRange = getPreviousDateRange(selectedRange);
+  const range = buildCustomRange(
+    statsRangeStartInput?.value,
+    statsRangeEndInput?.value,
+    baseRange
+  );
+  const previousRange = getPreviousStatsRange(range, selectedRange);
   const rangeOrders = filterOrdersByRange(state.orders, range);
   const previousOrders = filterOrdersByRange(state.orders, previousRange);
   const kpis = computeKpis(rangeOrders, previousOrders);
@@ -1846,6 +1910,7 @@ const handleAdminLogin = async (event: Event) => {
   adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
 
   setAdminUI(true);
+  setAdminView(state.adminView === "manage" ? "manage" : "stats");
   await fetchOrders();
   renderAdmin();
 };
@@ -2737,6 +2802,7 @@ const openAdminIfSession = async () => {
   setAdminUI(isAdmin);
   if (isAdmin) {
     adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
+    setAdminView(state.adminView === "manage" ? "manage" : "stats");
     await fetchOrders();
     renderAdmin();
   }
@@ -3658,8 +3724,29 @@ const setupListeners = () => {
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
   });
 
+  adminViewStatsBtn?.addEventListener("click", () => {
+    setAdminView("stats");
+  });
+  adminViewManageBtn?.addEventListener("click", () => {
+    setAdminView("manage");
+  });
+
   statsRangeSelect?.addEventListener("change", () => {
     state.statsRange = statsRangeSelect.value;
+    renderStatistics();
+  });
+
+  statsRangeStartInput?.addEventListener("change", () => {
+    state.statsRangeStart = statsRangeStartInput.value;
+    if (statsRangeSelect) statsRangeSelect.value = "custom";
+    state.statsRange = "custom";
+    renderStatistics();
+  });
+
+  statsRangeEndInput?.addEventListener("change", () => {
+    state.statsRangeEnd = statsRangeEndInput.value;
+    if (statsRangeSelect) statsRangeSelect.value = "custom";
+    state.statsRange = "custom";
     renderStatistics();
   });
 

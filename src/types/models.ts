@@ -200,6 +200,9 @@ export interface AppState {
   searchOrdersText: string;
   statsRange: string;
   statsSeries: string;
+  statsRangeStart: string;
+  statsRangeEnd: string;
+  adminView: string;
 }
 
 /**
