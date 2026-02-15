@@ -105,6 +105,8 @@ const adminViewStatsBtn = document.getElementById("admin-view-stats") as HTMLEle
 const adminViewManageBtn = document.getElementById("admin-view-manage") as HTMLElement | null;
 const adminStatsView = document.getElementById("admin-stats-view") as HTMLElement | null;
 const adminManageView = document.getElementById("admin-manage-view") as HTMLElement | null;
+const adminStatsCard = document.getElementById("admin-stats") as HTMLElement | null;
+const statsExportPdfBtn = document.getElementById("stats-export-pdf") as HTMLElement | null;
 const statsRangeSelect = document.getElementById("stats-range") as HTMLSelectElement | null;
 const statsRangeStartInput = document.getElementById("stats-range-start") as HTMLInputElement | null;
 const statsRangeEndInput = document.getElementById("stats-range-end") as HTMLInputElement | null;
@@ -3716,6 +3718,14 @@ const setupListeners = () => {
   adminOrdersExportXlsx?.addEventListener("click", () => {
     const filteredOrders = getFilteredOrdersForExport();
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
+  });
+  statsExportPdfBtn?.addEventListener("click", async () => {
+    try {
+      await OrderExportService.exportStatsAsPDF(adminStatsCard);
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      alert('ייצוא ה-PDF נכשל. נסו שוב.');
+    }
   });
 
   adminViewStatsBtn?.addEventListener("click", () => {

@@ -836,19 +836,20 @@ select.form-input {
 
 .stats-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .stats-range {
-  min-width: 220px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .stats-range-inputs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 0.5rem;
   direction: rtl;

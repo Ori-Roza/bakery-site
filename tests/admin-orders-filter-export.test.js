@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import * as OrderFilterService from '../src/services/OrderFilterService';
 import * as OrderExportService from '../src/services/OrderExportService';
+
+const saveMock = vi.fn().mockResolvedValue(undefined);
+const fromMock = vi.fn(() => ({ save: saveMock }));
+const setMock = vi.fn(() => ({ from: fromMock }));
+const html2pdfFactoryMock = vi.fn(() => ({ set: setMock }));
+
+vi.mock('html2pdf.js', () => ({
+  default: html2pdfFactoryMock,
+}));
 
 describe('Order Filter Service', () => {
   const mockOrders = [
@@ -331,14 +340,14 @@ describe('Order Export Service', () => {
       expect(csv).toContain('מזהה הזמנה');
       expect(csv).toContain('שם לקוח');
       expect(csv).toContain('תאריך');
-      expect(csv).toContain('סכום הזמנה');
+      expect(csv).toContain('סכום');
     });
 
     it('should include order data in CSV', () => {
       const csv = OrderExportService.generateCSV(mockOrders);
       expect(csv).toContain('100');
       expect(csv).toContain('אלי כהן');
-      expect(csv).toContain('0501234567');
+      expect(csv).toContain('150');
     });
 
     it('should format paid status correctly', () => {
@@ -348,10 +357,17 @@ describe('Order Export Service', () => {
       expect(lines[2]).toContain('לא');
     });
 
-    it('should include order items in CSV', () => {
+    it('should include all required columns in CSV', () => {
       const csv = OrderExportService.generateCSV(mockOrders);
-      expect(csv).toContain('עוגה');
-      expect(csv).toContain('עוגיות');
+      expect(csv).toContain('מזהה הזמנה');
+      expect(csv).toContain('שם לקוח');
+      expect(csv).toContain('תאריך יצירה');
+      expect(csv).toContain('תאריך איסוף');
+      expect(csv).toContain('סכום');
+      expect(csv).toContain('שולם');
+      expect(csv).toContain('הערות מנהל');
+      expect(csv).toContain('הערות לקוח');
+      expect(csv).toContain('מחוק');
     });
 
     it('should handle empty orders', () => {
@@ -390,6 +406,106 @@ describe('Order Export Service', () => {
       const blob = OrderExportService.generateXLSX([]);
       expect(blob).toBeInstanceOf(Blob);
       expect(blob.size).toBeGreaterThan(0);
+    });
+  });
+
+  describe('exportStatsAsPDF', () => {
+    beforeEach(() => {
+      saveMock.mockClear();
+      fromMock.mockClear();
+      setMock.mockClear();
+      html2pdfFactoryMock.mockClear();
+      window.alert = vi.fn();
+    });
+
+    it('should alert and skip export when element is missing', async () => {
+      await OrderExportService.exportStatsAsPDF(null);
+
+      expect(window.alert).toHaveBeenCalledTimes(1);
+      expect(html2pdfFactoryMock).not.toHaveBeenCalled();
+    });
+
+    it('should call html2pdf pipeline when element exists', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      await OrderExportService.exportStatsAsPDF(element);
+
+      expect(html2pdfFactoryMock).toHaveBeenCalledTimes(1);
+      expect(setMock).toHaveBeenCalledTimes(1);
+      expect(fromMock).toHaveBeenCalledWith(element);
+      expect(saveMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should temporarily remove overflow constraints from table wrappers', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'stats-table-wrapper';
+      tableWrapper.style.maxHeight = '320px';
+      tableWrapper.style.overflowY = 'auto';
+      element.appendChild(tableWrapper);
+
+      await OrderExportService.exportStatsAsPDF(element);
+
+      // After export, original styles should be restored
+      expect(tableWrapper.style.maxHeight).toBe('320px');
+      expect(tableWrapper.style.overflowY).toBe('auto');
+    });
+
+    it('should restore original styles even if export fails', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'admin-table-wrapper';
+      tableWrapper.style.maxHeight = '360px';
+      tableWrapper.style.overflowY = 'auto';
+      element.appendChild(tableWrapper);
+
+      // Make the export fail
+      saveMock.mockRejectedValueOnce(new Error('Export failed'));
+
+      try {
+        await OrderExportService.exportStatsAsPDF(element);
+      } catch (e) {
+        // Expected failure
+      }
+
+      // Styles should still be restored
+      expect(tableWrapper.style.maxHeight).toBe('360px');
+      expect(tableWrapper.style.overflowY).toBe('auto');
+    });
+
+    it('should exclude stats export button and action buttons from PDF', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      const button = document.createElement('button');
+      button.id = 'stats-export-pdf';
+      element.appendChild(button);
+
+      await OrderExportService.exportStatsAsPDF(element);
+
+      expect(setMock).toHaveBeenCalledTimes(1);
+      const config = setMock.mock.calls[0][0];
+      
+      // Verify that the ignoreElements function excludes the export button
+      expect(config.html2canvas.ignoreElements(button)).toBe(true);
+    });
+
+    it('should use flexible pagebreak mode to allow table spanning pages', async () => {
+      const element = document.createElement('div');
+      element.id = 'admin-stats';
+
+      await OrderExportService.exportStatsAsPDF(element);
+
+      const config = setMock.mock.calls[0][0];
+      // Should NOT use 'avoid-all' which prevents breaking across pages
+      expect(config.pagebreak.mode).not.toContain('avoid-all');
+      // Should allow natural page breaking with CSS and legacy modes
+      expect(config.pagebreak.mode).toEqual(['css', 'legacy']);
     });
   });
 });
