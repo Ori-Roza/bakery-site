@@ -46,7 +46,7 @@ const initialState: AppState = {
   statsSeries: "revenue",
   statsRangeStart: "",
   statsRangeEnd: "",
-  adminView: "stats",
+  adminView: "manage",
 };
 
 /**

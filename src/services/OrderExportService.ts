@@ -387,31 +387,31 @@ export function printOrdersTable(
 
         .print-header {
           text-align: center;
-          margin-bottom: 20px;
-          border-bottom: 2px solid #333;
-          padding-bottom: 10px;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #333;
+          padding-bottom: 6px;
         }
 
         .print-header h1 {
-          font-size: 24px;
+          font-size: 18px;
           font-weight: bold;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
           color: #92442d;
         }
 
         .print-info {
-          font-size: 11px;
+          font-size: 10px;
           color: #666;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
 
         .filters-section {
-          font-size: 11px;
-          margin-top: 12px;
-          padding: 8px;
+          font-size: 10px;
+          margin-top: 6px;
+          padding: 4px 8px;
           background-color: #f5f5f5;
           border-right: 3px solid #92442d;
-          margin-bottom: 16px;
+          margin-bottom: 8px;
         }
 
         .filters-section strong {
@@ -423,7 +423,7 @@ export function printOrdersTable(
           width: 100%;
           border-collapse: collapse;
           font-size: 11px;
-          margin-top: 10px;
+          margin-top: 4px;
         }
 
         .print-table thead {
@@ -471,12 +471,6 @@ export function printOrdersTable(
 
         /* Print-specific adjustments */
         @media print {
-          body {
-            padding: 10mm;
-          }
-          .print-table {
-            page-break-inside: avoid;
-          }
           .print-table tbody tr {
             page-break-inside: avoid;
           }
