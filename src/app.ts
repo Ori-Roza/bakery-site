@@ -101,6 +101,7 @@ const adminOrdersFilterBtn = document.getElementById("admin-orders-filter-btn") 
 const adminOrdersClearFiltersBtn = document.getElementById("admin-orders-clear-filters-btn") as HTMLElement | null;
 const adminOrdersExportCsv = document.getElementById("admin-orders-export-csv") as HTMLElement | null;
 const adminOrdersExportXlsx = document.getElementById("admin-orders-export-xlsx") as HTMLElement | null;
+const adminOrdersPrintBtn = document.getElementById("admin-orders-print") as HTMLElement | null;
 const adminViewStatsBtn = document.getElementById("admin-view-stats") as HTMLElement | null;
 const adminViewManageBtn = document.getElementById("admin-view-manage") as HTMLElement | null;
 const adminStatsView = document.getElementById("admin-stats-view") as HTMLElement | null;
@@ -3718,6 +3719,11 @@ const setupListeners = () => {
   adminOrdersExportXlsx?.addEventListener("click", () => {
     const filteredOrders = getFilteredOrdersForExport();
     OrderExportService.exportOrdersAsXLSX(filteredOrders);
+  });
+  adminOrdersPrintBtn?.addEventListener("click", () => {
+    const filteredOrders = getFilteredOrdersForExport();
+    const searchQuery = adminOrdersSearchInput?.value?.trim() || "";
+    OrderExportService.printOrdersTable(filteredOrders, state.activeOrderFilters, searchQuery);
   });
   statsExportPdfBtn?.addEventListener("click", async () => {
     try {

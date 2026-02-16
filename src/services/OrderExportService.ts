@@ -3,7 +3,8 @@
  * Handles generating and downloading orders as CSV or XLSX
  */
 
-import type { Order } from '../types/models';
+import type { Order, OrderFilter } from '../types/models';
+import { formatFilterForDisplay } from './OrderFilterService';
 
 /**
  * Format date for export (he-IL locale)
@@ -229,5 +230,286 @@ export async function exportStatsAsPDF(element: HTMLElement | null): Promise<voi
       htmlEl.style.overflowX = styles.overflowX || '';
       htmlEl.style.overflow = styles.overflow || '';
     });
+  }
+}
+
+/**
+ * Format timestamp for print (DD/MM/YYYY HH:MM in he-IL)
+ */
+function formatTimestampForPrint(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+/**
+ * Build active filters summary for print display
+ */
+function buildFiltersSummary(activeFilters: OrderFilter[], searchQuery: string): string {
+  const filterStrings = activeFilters.map((filter) => formatFilterForDisplay(filter));
+  const allFilters = [];
+
+  if (searchQuery) {
+    allFilters.push(`חיפוש: ${searchQuery}`);
+  }
+  allFilters.push(...filterStrings);
+
+  return allFilters.join(', ');
+}
+
+/**
+ * Generate HTML row for order (for print table)
+ */
+function generatePrintTableRow(order: Order): string {
+  const orderNumber = order.order_number || order.id || '';
+  const customerName = order.customer?.name || order.customer_name || '';
+  const createdAt = formatDateForExport(order.created_at);
+  const pickupDate = formatDateForExport(order.pickup_date);
+  const total = order.total || order.total_price || '';
+  const paid = order.paid ? 'כן' : 'לא';
+  const notes = order.notes || '';
+  const userNotes = order.user_notes || '';
+  const deleted = order.deleted ? 'כן' : 'לא';
+
+  const rowClass = order.deleted ? 'print-deleted-row' : '';
+
+  return `
+    <tr class="${rowClass}">
+      <td>${escapeHtml(String(orderNumber))}</td>
+      <td>${escapeHtml(customerName)}</td>
+      <td>${escapeHtml(createdAt)}</td>
+      <td>${escapeHtml(pickupDate)}</td>
+      <td>${escapeHtml(String(total))}</td>
+      <td>${escapeHtml(paid)}</td>
+      <td>${escapeHtml(notes)}</td>
+      <td>${escapeHtml(userNotes)}</td>
+      <td>${escapeHtml(deleted)}</td>
+    </tr>
+  `;
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
+/**
+ * Print orders table with filters info
+ */
+export function printOrdersTable(
+  orders: Order[],
+  activeFilters: OrderFilter[],
+  searchQuery: string
+): void {
+  const timestamp = formatTimestampForPrint(new Date());
+  const filtersSummary = buildFiltersSummary(activeFilters, searchQuery);
+  const hasFilters = activeFilters.length > 0 || searchQuery.trim().length > 0;
+
+  let tableHtml = '';
+
+  if (orders.length === 0) {
+    tableHtml = '<p class="empty-state">אין הזמנות להצגה לפי הסינון הנוכחי</p>';
+  } else {
+    const tableRows = orders.map((order) => generatePrintTableRow(order)).join('');
+
+    tableHtml = `
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>מזהה הזמנה</th>
+            <th>שם מזמין</th>
+            <th>תאריך יצירה</th>
+            <th>תאריך איסוף</th>
+            <th>סכום</th>
+            <th>שולם</th>
+            <th>הערות מנהל</th>
+            <th>הערות לקוח</th>
+            <th>מחוק</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    `;
+  }
+
+  const filtersHtml = hasFilters
+    ? `<div class="filters-section"><strong>סינונים פעילים:</strong> ${escapeHtml(filtersSummary)}</div>`
+    : '';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="he">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>הזמנות</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        html, body {
+          direction: rtl;
+          font-family: Arial, sans-serif;
+          font-size: 12px;
+          line-height: 1.6;
+          background: white;
+          color: #333;
+        }
+
+        @page {
+          size: A4 landscape;
+          margin: 10mm;
+        }
+
+        @media print {
+          body {
+            margin: 0;
+            padding: 10mm;
+          }
+        }
+
+        .print-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 10px;
+        }
+
+        .print-header h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 8px;
+          color: #92442d;
+        }
+
+        .print-info {
+          font-size: 11px;
+          color: #666;
+          margin-bottom: 4px;
+        }
+
+        .filters-section {
+          font-size: 11px;
+          margin-top: 12px;
+          padding: 8px;
+          background-color: #f5f5f5;
+          border-right: 3px solid #92442d;
+          margin-bottom: 16px;
+        }
+
+        .filters-section strong {
+          font-weight: bold;
+          color: #92442d;
+        }
+
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 11px;
+          margin-top: 10px;
+        }
+
+        .print-table thead {
+          display: table-header-group;
+          background-color: #fff3e0;
+        }
+
+        .print-table th {
+          border: 1px solid #ccc;
+          padding: 8px;
+          text-align: right;
+          font-weight: bold;
+          background-color: #fff3e0;
+          color: #333;
+        }
+
+        .print-table td {
+          border: 1px solid #ccc;
+          padding: 6px;
+          text-align: right;
+          word-break: break-word;
+          white-space: normal;
+          max-width: 100px;
+        }
+
+        .print-table tbody tr:nth-child(even) {
+          background-color: #fafafa;
+        }
+
+        .print-table tbody tr:hover {
+          background-color: #f0f0f0;
+        }
+
+        .print-deleted-row {
+          opacity: 0.6;
+          text-decoration: line-through;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+          font-size: 14px;
+          color: #999;
+        }
+
+        /* Print-specific adjustments */
+        @media print {
+          body {
+            padding: 10mm;
+          }
+          .print-table {
+            page-break-inside: avoid;
+          }
+          .print-table tbody tr {
+            page-break-inside: avoid;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <h1>הזמנות</h1>
+        <div class="print-info">הודפס בתאריך: ${timestamp}</div>
+      </div>
+      ${filtersHtml}
+      <div class="print-content">
+        ${tableHtml}
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Open new window and write content
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+
+    // Trigger print dialog after content loads
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+
+    // Optional: Close window after print completes
+    printWindow.onafterprint = () => {
+      printWindow.close();
+    };
   }
 }
