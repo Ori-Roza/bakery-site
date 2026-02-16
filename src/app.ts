@@ -1907,7 +1907,7 @@ const handleAdminLogin = async (event: Event) => {
   adminGreetingEl && (adminGreetingEl.textContent = `Hello ${state.session.user.email}`);
 
   setAdminUI(true);
-  setAdminView(state.adminView === "stats" ? "stats" : "manage");
+  setAdminView(state.adminView === "manage" ? "manage" : "stats");
   await fetchOrders();
   renderAdmin();
 };

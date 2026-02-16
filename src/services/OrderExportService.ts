@@ -387,31 +387,31 @@ export function printOrdersTable(
 
         .print-header {
           text-align: center;
-          margin-bottom: 10px;
+          margin-bottom: 20px;
           border-bottom: 2px solid #333;
-          padding-bottom: 6px;
+          padding-bottom: 10px;
         }
 
         .print-header h1 {
-          font-size: 20px;
+          font-size: 24px;
           font-weight: bold;
-          margin-bottom: 4px;
+          margin-bottom: 8px;
           color: #92442d;
         }
 
         .print-info {
-          font-size: 10px;
+          font-size: 11px;
           color: #666;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .filters-section {
-          font-size: 10px;
-          margin-top: 8px;
-          padding: 6px;
+          font-size: 11px;
+          margin-top: 12px;
+          padding: 8px;
           background-color: #f5f5f5;
           border-right: 3px solid #92442d;
-          margin-bottom: 10px;
+          margin-bottom: 16px;
         }
 
         .filters-section strong {
