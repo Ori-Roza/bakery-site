@@ -5,6 +5,7 @@
 
 import type { Order, OrderFilter } from '../types/models';
 import { formatFilterForDisplay } from './OrderFilterService';
+import * as XLSX from 'xlsx';
 
 /**
  * Format date for export (he-IL locale)
@@ -79,37 +80,40 @@ export function generateCSV(orders: Order[]): string {
 }
 
 /**
- * Generate XLSX as CSV-compatible format for now
- * Note: For true XLSX support, the 'xlsx' package would need to be added to dependencies
- * This generates a TSV that can be opened in Excel, or can be converted to XLSX
+ * Generate a proper XLSX workbook blob from orders
  */
 export function generateXLSX(orders: Order[]): Blob {
-  // For now, we'll generate tab-separated values which Excel handles well
-  // This is compatible with xlsx library: xlsx.utils.sheet_to_csv(ws, { FS: '\t' })
-  const rows: string[] = [];
+  const data: any[][] = [];
 
   // Add header row
-  rows.push(CSV_HEADERS.map(escapeCSVValue).join('\t'));
+  data.push([...CSV_HEADERS]);
 
   // Add data rows
   for (const order of orders) {
-    const row = [
-      escapeCSVValue(order.order_number || order.id),
-      escapeCSVValue(order.customer?.name || order.customer_name || ''),
-      escapeCSVValue(formatDateForExport(order.created_at)),
-      escapeCSVValue(formatDateForExport(order.pickup_date)),
-      escapeCSVValue(order.total || order.total_price || ''),
-      escapeCSVValue(order.paid ? 'כן' : 'לא'),
-      escapeCSVValue(order.notes || ''),
-      escapeCSVValue(order.user_notes || ''),
-      escapeCSVValue(order.deleted ? 'כן' : 'לא'),
-    ];
-
-    rows.push(row.join('\t'));
+    data.push([
+      order.order_number || order.id,
+      order.customer?.name || order.customer_name || '',
+      formatDateForExport(order.created_at),
+      formatDateForExport(order.pickup_date),
+      order.total || order.total_price || '',
+      order.paid ? 'כן' : 'לא',
+      order.notes || '',
+      order.user_notes || '',
+      order.deleted ? 'כן' : 'לא',
+    ]);
   }
 
-  const content = rows.join('\n');
-  return new Blob([content], {
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+  // Set RTL sheet direction
+  if (!worksheet['!SheetPr']) worksheet['!SheetPr'] = {};
+  (worksheet['!SheetPr'] as any).rightToLeft = true;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'הזמנות');
+
+  const xlsxBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([xlsxBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 }
