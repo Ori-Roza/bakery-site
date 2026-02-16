@@ -4007,7 +4007,7 @@ const init = async () => {
     adminGreetingEl && (adminGreetingEl.textContent = `Hello admin@bakery.local`);
     setAdminUI(true);
     renderAdmin();
-    setAdminView('stats');
+    setAdminView('manage');
     console.log('[init] Auto-login for mock mode admin access');
   }
   const productHeaders = document.getElementById("admin-products-table");
