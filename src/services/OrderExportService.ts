@@ -302,7 +302,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, (char) => map[char]!);
 }
 
 /**
@@ -387,31 +387,31 @@ export function printOrdersTable(
 
         .print-header {
           text-align: center;
-          margin-bottom: 20px;
+          margin-bottom: 10px;
           border-bottom: 2px solid #333;
-          padding-bottom: 10px;
+          padding-bottom: 6px;
         }
 
         .print-header h1 {
-          font-size: 24px;
+          font-size: 20px;
           font-weight: bold;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
           color: #92442d;
         }
 
         .print-info {
-          font-size: 11px;
+          font-size: 10px;
           color: #666;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
 
         .filters-section {
-          font-size: 11px;
-          margin-top: 12px;
-          padding: 8px;
+          font-size: 10px;
+          margin-top: 8px;
+          padding: 6px;
           background-color: #f5f5f5;
           border-right: 3px solid #92442d;
-          margin-bottom: 16px;
+          margin-bottom: 10px;
         }
 
         .filters-section strong {
