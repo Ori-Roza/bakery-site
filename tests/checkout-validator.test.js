@@ -66,9 +66,10 @@ describe("CheckoutValidator", () => {
     });
 
     it("accepts pickup at 06:00 (opening time)", () => {
-      // Use a future weekday
+      // Use a future weekday (skip Saturday)
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 5);
+      if (futureDate.getDay() === 6) futureDate.setDate(futureDate.getDate() + 1);
       const dateStr = futureDate.toISOString().split('T')[0];
 
       const result = CheckoutValidator.validatePickupDateTime(dateStr, "06:00");
@@ -81,6 +82,7 @@ describe("CheckoutValidator", () => {
     it("accepts pickup at 14:59 (before closing)", () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 5);
+      if (futureDate.getDay() === 6) futureDate.setDate(futureDate.getDate() + 1);
       const dateStr = futureDate.toISOString().split('T')[0];
 
       const result = CheckoutValidator.validatePickupDateTime(dateStr, "14:59");
